@@ -53,19 +53,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private val sessionInternal = MutableStateFlow<Session?>(null)
     val session: StateFlow<Session?> = sessionInternal
 
-    val startDestination: StateFlow<String> = sessionInternal.map { s ->
-        when {
-            s != null -> "home"
-            runBlocking { runCatching { db.prefDao().get("onboarded") }.getOrNull() == "1" } -> "auth"
-            else -> "splash"
-        }
-    }.stateIn(viewModelScope, SharingStarted.Eagerly, "splash")
+    private val onboardedPrefs =
+        app.getSharedPreferences("rippleup_state", android.content.Context.MODE_PRIVATE)
 
-    /** Synchronous one-shot start route for the NavHost. */
+    /** Synchronous one-shot start route (SharedPreferences — never main-thread Room). */
     fun computeStart(): String {
         if (sessionInternal.value != null) return "home"
-        val onboarded = runCatching { runBlocking { db.prefDao().get("onboarded") } }.getOrNull() == "1"
-        return if (onboarded) "auth" else "splash"
+        return if (onboardedPrefs.getBoolean("onboarded", false)) "auth" else "splash"
     }
 
     fun login(email: String, password: String, onResult: (Boolean, String) -> Unit) {
@@ -105,7 +99,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun markOnboarded() {
-        viewModelScope.launch { runCatching { db.prefDao().put(Repo.pref("onboarded", "1")) } }
+        onboardedPrefs.edit().putBoolean("onboarded", true).apply()
     }
 
     // ---- ripples ----------------------------------------------------------------
