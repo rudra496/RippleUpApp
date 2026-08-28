@@ -214,7 +214,7 @@ fun VerifyActionScreen(
         }
         Spacer(Modifier.height(16.dp))
         GradientButton(
-            label = if (captured) "Submit & Verify!" else "Add a photo to submit",
+            label = if (captured) "Submit & Verify!" else "Take a photo to submit",
             enabled = captured && !submitting,
             modifier = Modifier.fillMaxWidth(),
         ) {

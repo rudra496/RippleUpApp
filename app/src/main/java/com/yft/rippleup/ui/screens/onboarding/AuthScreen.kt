@@ -55,7 +55,7 @@ fun AuthScreen(
 
     when (subRoute) {
         SubRoute.FORM -> AuthForm(tab, { tab = it }, vm, onAuthed, onNeedsPersonalisation) { subRoute = it }
-        SubRoute.FORGOT -> ForgotScreen { subRoute = SubRoute.CHECK }
+        SubRoute.FORGOT -> ForgotScreen(onBack = { subRoute = SubRoute.FORM }) { subRoute = SubRoute.CHECK }
         SubRoute.CHECK -> CheckEmailScreen(onBack = { subRoute = SubRoute.FORM }, onReset = { subRoute = SubRoute.RESET })
         SubRoute.RESET -> ResetPasswordScreen(onBackToLogin = { subRoute = SubRoute.FORM })
     }

@@ -64,11 +64,13 @@ fun PersonaliseScreen(onContinue: () -> Unit) {
             }
         }
         Spacer(Modifier.height(18.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            RippleLogo(size = 30.dp)
-            Spacer(Modifier.width(8.dp))
-            Text("Personalisation", style = TextStyle(fontSize = 24.sp, fontWeight = FontWeight.Bold), color = Ink)
-        }
+        Text(
+            "Personalisation",
+            style = TextStyle(fontSize = 24.sp, fontWeight = FontWeight.Bold),
+            color = Ink,
+            modifier = Modifier.fillMaxWidth(),
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+        )
         Spacer(Modifier.height(10.dp))
         Text(
             "Add your interests so we can personalise your Ripple actions for you.",

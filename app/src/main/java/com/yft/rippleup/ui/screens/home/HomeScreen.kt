@@ -87,7 +87,7 @@ fun HomeScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 RippleLogo(size = 42.dp)
-                CircleIconButton(onClick = onOpenNotifications, badge = true) {
+                CircleIconButton(bg = White, onClick = onOpenNotifications, badge = true) {
                     Icon(
                         Icons.Outlined.Notifications,
                         contentDescription = "Notifications",
@@ -343,12 +343,19 @@ fun TimelineRow(r: RippleEntity, isLast: Boolean, onStartVerify: () -> Unit) {
                 if (done) Text("✓", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
             }
             if (!isLast) {
-                Box(
+                androidx.compose.foundation.Canvas(
                     Modifier
                         .width(2.dp)
                         .height(64.dp)
-                        .background(Brush.verticalGradient(listOf(Color(0x660D9488), Color(0x330D9488))))
-                )
+                ) {
+                    drawLine(
+                        color = Color(0x590D9488),
+                        start = androidx.compose.ui.geometry.Offset(1f, 0f),
+                        end = androidx.compose.ui.geometry.Offset(1f, size.height),
+                        strokeWidth = 2f,
+                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(8f, 7f)),
+                    )
+                }
             }
         }
         Spacer(Modifier.width(12.dp))

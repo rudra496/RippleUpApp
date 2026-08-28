@@ -70,7 +70,7 @@ fun DiscoverScreen(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             RippleLogo(size = 42.dp)
-            CircleIconButton(onClick = onOpenNotifications, badge = true) {
+            CircleIconButton(bg = White, onClick = onOpenNotifications, badge = true) {
                 Icon(Icons.Outlined.Notifications, contentDescription = "Notifications", tint = Ink, modifier = Modifier.size(18.dp))
             }
         }

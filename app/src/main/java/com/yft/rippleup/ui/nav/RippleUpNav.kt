@@ -235,9 +235,9 @@ fun RippleUpAppRoot(vm: AppViewModel) {
             QrScanScreen(
                 onDetected = {
                     pendingVerify = PendingVerify(
-                        "Recycled plastic @ EcoRecycle Hub",
-                        "Partner-verified at EcoRecycle Hub",
-                        500, "recycle", 1.2f, viaQr = true,
+                        "Donated clothes @ ThriftUp",
+                        "Partner-verified at ThriftUp Store",
+                        500, "donate", 1.2f, viaQr = true,
                     )
                     nav.navigate(Routes.VERIFYING)
                 },

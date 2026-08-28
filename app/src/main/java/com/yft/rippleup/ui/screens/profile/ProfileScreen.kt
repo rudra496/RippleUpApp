@@ -84,7 +84,7 @@ fun ProfileScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 RippleLogo(size = 42.dp)
-                CircleIconButton(onClick = {}, badge = true) {
+                CircleIconButton(bg = White, onClick = {}, badge = true) {
                     Icon(Icons.Outlined.Notifications, contentDescription = null, tint = Ink, modifier = Modifier.size(18.dp))
                 }
             }
@@ -135,9 +135,9 @@ fun ProfileScreen(
             Spacer(Modifier.height(18.dp))
             Text("Settings", color = Teal, fontSize = 14.sp, fontWeight = FontWeight.Medium)
             Spacer(Modifier.height(10.dp))
-            SettingRow(icon = { Text("💧", fontSize = 16.sp) }, label = "About Ripple Up") { showAbout = true }
+            SettingRow(icon = { androidx.compose.foundation.Image(painterResource(R.drawable.drop), contentDescription = null, modifier = Modifier.size(18.dp)) }, label = "About Ripple Up") { showAbout = true }
             SettingRow(icon = { Icon(Icons.Outlined.Notifications, null, tint = Teal, modifier = Modifier.size(18.dp)) }, label = "Notifications") { showNotif = true }
-            SettingRow(icon = { Icon(Icons.Outlined.Lock, null, tint = Teal, modifier = Modifier.size(18.dp)) }, label = "Help & Support") { showHelp = true }
+            SettingRow(icon = { Text("🎧", fontSize = 14.sp) }, label = "Help & Support") { showHelp = true }
             SettingRow(icon = { Icon(Icons.Outlined.Lock, null, tint = Teal, modifier = Modifier.size(18.dp)) }, label = "Privacy and Data") { showPrivacy = true }
         }
     }

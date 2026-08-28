@@ -351,7 +351,7 @@ fun NotificationsSheet(onClose: () -> Unit, onLogAction: () -> Unit) {
 fun EventDetailSheet(onClose: () -> Unit) {
     var registered by remember { mutableStateOf(false) }
     val ev = Content.eventDetail
-    SheetScaffold(title = "", onClose = onClose) {
+    SheetScaffold(title = "", trailing = {}, onClose = onClose) {
         Column(
             Modifier
                 .padding(horizontal = 20.dp)

@@ -43,7 +43,7 @@ import kotlinx.coroutines.delay
 
 /** p25/p26 — Forgot Password (disabled/enabled button states). */
 @Composable
-fun ForgotScreen(onSent: () -> Unit) {
+fun ForgotScreen(onBack: () -> Unit, onSent: () -> Unit) {
     var email by remember { mutableStateOf("") }
     val valid = email.contains("@") && email.contains(".")
     Column(
@@ -55,7 +55,7 @@ fun ForgotScreen(onSent: () -> Unit) {
             .padding(horizontal = 24.dp),
     ) {
         Spacer(Modifier.height(24.dp))
-        CircleIconButton(onClick = { }) {
+        CircleIconButton(onClick = onBack) {
             Text("‹", color = Ink, fontSize = 18.sp, fontWeight = FontWeight.Bold)
         }
         Spacer(Modifier.height(40.dp))
