@@ -1,0 +1,43 @@
+# Builds the Compose Multiplatform DESKTOP distributable (Windows) on every push
+# that touches desktop/, plus manual dispatch. Produces a self-contained zip:
+# unzip anywhere and run RippleUpDesktop.exe — no Java installation required.
+name: Build Desktop
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'desktop/**'
+      - '.github/workflows/build-desktop.yml'
+  workflow_dispatch:
+
+jobs:
+  desktop:
+    name: Desktop (Windows)
+    runs-on: windows-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Build distributable
+        shell: bash
+        working-directory: desktop
+        run: ./gradlew createDistributable --no-daemon --stacktrace
+
+      - name: Zip distributable
+        shell: pwsh
+        run: Compress-Archive -Path desktop/build/compose/binaries/main/app/RippleUpDesktop -DestinationPath RippleUp-Desktop-windows.zip -Force
+
+      - name: Upload desktop zip
+        uses: actions/upload-artifact@v4
+        with:
+          name: rippleup-desktop-windows
+          path: RippleUp-Desktop-windows.zip
+          retention-days: 90
+          if-no-files-found: error
