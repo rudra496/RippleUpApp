@@ -123,6 +123,17 @@ fun VerificationReceiptScreen(
         if (receipt.user_lat != null && receipt.user_lng != null) {
             Text("Where it happened", style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Bold), color = Ink)
             Spacer(Modifier.height(8.dp))
+            if (!receipt.user_address.isNullOrBlank()) {
+                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Color.White).padding(14.dp)) {
+                    Text("USER SCANNED FROM", color = Teal, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = androidx.compose.ui.unit.TextUnit(1f, androidx.compose.ui.unit.TextUnitType.Sp))
+                    Spacer(Modifier.height(4.dp))
+                    Text(receipt.user_address, style = TextStyle(fontSize = 13.sp, lineHeight = 19.sp), color = Ink)
+                    receipt.accuracy_m?.let {
+                        Text("GPS accuracy ±${it} m", color = Secondary, fontSize = 11.sp)
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+            }
             MiniMap(lat = receipt.user_lat, lng = receipt.user_lng, modifier = Modifier.fillMaxWidth())
             Spacer(Modifier.height(6.dp))
             Text(
@@ -168,6 +179,7 @@ fun VerificationRow(
     time: String,
     status: String,
     distance: Int?,
+    address: String? = null,
     onClick: () -> Unit,
 ) {
     val (statusText, statusBg, statusFg) = when (status) {
@@ -189,6 +201,7 @@ fun VerificationRow(
         Column(Modifier.weight(1f)) {
             Text(name, style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Bold), color = Ink)
             Text("$place · $time", color = Secondary, fontSize = 11.sp)
+            if (!address.isNullOrBlank()) Text(address, color = Color(0xFF4B5B57), fontSize = 11.sp, maxLines = 2)
             if (distance != null) Text("${distance} m from partner point", color = Teal, fontSize = 11.sp)
         }
         Spacer(Modifier.width(8.dp))

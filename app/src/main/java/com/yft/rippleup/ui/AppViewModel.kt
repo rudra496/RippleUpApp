@@ -376,6 +376,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         location: CloudLocation,
         userLat: Double?,
         userLng: Double?,
+        userAddress: String?,
+        accuracyM: Int?,
         device: String,
         title: String,
         subtitle: String,
@@ -406,7 +408,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val cv = cloud.pushVerification(
             com.yft.rippleup.data.remote.CloudVerification(
                 user_id = uid, ripple_id = cr.id, location_id = location.id, method = "qr",
-                user_lat = userLat, user_lng = userLng, distance_m = distance, device = device,
+                user_lat = userLat, user_lng = userLng, user_address = userAddress,
+                accuracy_m = accuracyM, distance_m = distance, device = device,
                 status = verStatus,
             )
         )

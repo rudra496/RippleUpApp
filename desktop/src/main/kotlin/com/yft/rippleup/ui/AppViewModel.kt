@@ -301,7 +301,9 @@ class AppViewModel(private val store: RippleStore) {
         val cv = cloud.pushVerification(
             CloudVerification(
                 user_id = uid, ripple_id = cr.id, location_id = location.id, method = "desktop",
-                user_lat = location.lat, user_lng = location.lng, distance_m = 0,
+                user_lat = location.lat, user_lng = location.lng,
+                user_address = listOfNotNull(location.name, location.address).joinToString(", "),
+                accuracy_m = null, distance_m = 0,
                 device = "Desktop", status = "flagged",
             )
         )

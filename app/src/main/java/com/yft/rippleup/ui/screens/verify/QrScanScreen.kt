@@ -166,12 +166,14 @@ fun QrScanScreen(
                                                             detected = false; processing = false
                                                             status = "Unknown location — is the cloud configured?"
                                                         } else {
-                                                            status = "Getting your GPS position…"
-                                                            val loc = GeoHelper.currentLocation(context)
+                                                            status = "Getting your GPS position and address…"
+                                                            val fix = GeoHelper.fullFix(context)
                                                             val (ver, err) = vm.recordQrVerification(
                                                                 location = location,
-                                                                userLat = loc?.latitude,
-                                                                userLng = loc?.longitude,
+                                                                userLat = fix.lat,
+                                                                userLng = fix.lng,
+                                                                userAddress = fix.address,
+                                                                accuracyM = fix.accuracyM,
                                                                 device = "${Build.MANUFACTURER} ${Build.MODEL}".trim(),
                                                                 title = "Partner action @ ${location.name}",
                                                                 subtitle = "QR-verified at ${location.name}",

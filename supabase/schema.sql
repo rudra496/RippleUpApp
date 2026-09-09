@@ -74,6 +74,8 @@ create table if not exists public.verifications (
   method text not null default 'qr',
   user_lat double precision,
   user_lng double precision,
+  user_address text,
+  accuracy_m integer,
   distance_m integer,
   device text,
   status text not null default 'pending',

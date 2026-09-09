@@ -110,6 +110,7 @@ fun AdminScreen(vm: com.yft.rippleup.ui.AppViewModel, onBack: () -> Unit) {
                         time = r.created_at?.take(16)?.replace('T', ' ') ?: "",
                         status = r.status,
                         distance = r.distance_m,
+                        address = r.user_address,
                         onClick = { open = r },
                     )
                     if (r.status == "pending" || r.status == "flagged") {

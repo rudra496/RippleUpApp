@@ -53,4 +53,49 @@ object GeoHelper {
             }
         }
     }
+
+    /** GPS fix + human-readable full address ("Area, Street, City, Country"). */
+    data class FullFix(val lat: Double?, val lng: Double?, val accuracyM: Int?, val address: String?)
+
+    suspend fun fullFix(context: Context): FullFix {
+        val loc = currentLocation(context)
+        if (loc == null) return FullFix(null, null, null, null)
+        val address = reverseGeocode(context, loc.latitude, loc.longitude)
+        return FullFix(loc.latitude, loc.longitude, loc.accuracy.toInt(), address)
+    }
+
+    /** Android Geocoder first; OpenStreetMap Nominatim fallback (free, no key). */
+    suspend fun reverseGeocode(context: Context, lat: Double, lng: Double): String? {
+        runCatching {
+            val geocoder = android.location.Geocoder(context, java.util.Locale.getDefault())
+            @Suppress("DEPRECATION")
+            val list = geocoder.getFromLocation(lat, lng, 1)
+            val a = list?.firstOrNull()
+            if (a != null) {
+                val parts = listOfNotNull(
+                    a.subLocality?.ifBlank { null },
+                    a.locality?.ifBlank { null },
+                    a.thoroughfare?.ifBlank { null },
+                    a.adminArea?.ifBlank { null },
+                    a.countryName?.ifBlank { null },
+                )
+                val full = a.getAddressLine(0)
+                if (!full.isNullOrBlank()) return full
+                if (parts.isNotEmpty()) return parts.joinToString(", ")
+            }
+        }
+        return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            runCatching {
+                val url = "https://nominatim.openstreetmap.org/reverse?lat=$lat&lon=$lng&format=json&zoom=18"
+                val con = java.net.URL(url).openConnection() as java.net.HttpURLConnection
+                con.connectTimeout = 8000; con.readTimeout = 8000
+                con.setRequestProperty("User-Agent", "RippleUp/5.1 (Android)")
+                val body = con.inputStream.bufferedReader().readText()
+                con.disconnect()
+                kotlinx.serialization.json.Json.parseToJsonElement(body)
+                    .let { it as? kotlinx.serialization.json.JsonObject }
+                    ?.get("display_name")?.toString()?.trim('"')
+            }.getOrNull()
+        }
+    }
 }
