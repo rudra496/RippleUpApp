@@ -21,6 +21,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.HelpOutline
+import androidx.compose.material.icons.outlined.FactCheck
+import androidx.compose.material.icons.outlined.Logout
+import androidx.compose.material.icons.outlined.Verified
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material3.Icon
@@ -62,12 +65,15 @@ import com.yft.rippleup.ui.theme.*
 @Composable
 fun ProfileScreen(
     vm: AppViewModel,
-    onOpenAbout: () -> Unit,
-    onOpenNotifSettings: () -> Unit,
-    onOpenHelp: () -> Unit,
-    onOpenPrivacy: () -> Unit,
+    onOpenAbout: () -> Unit = {},
+    onOpenNotifSettings: () -> Unit = {},
+    onOpenHelp: () -> Unit = {},
+    onOpenPrivacy: () -> Unit = {},
+    onOpenAdmin: () -> Unit = {},
+    onOpenMyVerifications: () -> Unit = {},
 ) {
     val stats by vm.stats.collectAsState()
+    val session by vm.session.collectAsState()
     var showAbout by remember { mutableStateOf(false) }
     var showNotif by remember { mutableStateOf(false) }
     var showHelp by remember { mutableStateOf(false) }
@@ -149,6 +155,17 @@ fun ProfileScreen(
             SettingRow(icon = { Icon(Icons.Outlined.Notifications, null, tint = Teal, modifier = Modifier.size(18.dp)) }, label = "Notifications") { showNotif = true }
             SettingRow(icon = { Text("🎧", fontSize = 14.sp) }, label = "Help & Support") { showHelp = true }
             SettingRow(icon = { Icon(Icons.Outlined.Lock, null, tint = Teal, modifier = Modifier.size(18.dp)) }, label = "Privacy and Data") { showPrivacy = true }
+            if (session?.isAdmin == true) {
+                SettingRow(icon = { Icon(Icons.Outlined.FactCheck, null, tint = Teal, modifier = Modifier.size(18.dp)) }, label = "Admin Review") { onOpenAdmin() }
+            }
+            if (session?.cloudId != null) {
+                SettingRow(icon = { Icon(Icons.Outlined.Verified, null, tint = Teal, modifier = Modifier.size(18.dp)) }, label = "My Verifications") { onOpenMyVerifications() }
+            }
+            if (session != null) {
+                SettingRow(icon = { Icon(Icons.Outlined.Logout, null, tint = Teal, modifier = Modifier.size(18.dp)) }, label = "Log out") {
+                    vm.logout()
+                }
+            }
         }
     }
 

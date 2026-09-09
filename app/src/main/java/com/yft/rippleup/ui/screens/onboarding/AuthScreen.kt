@@ -1,6 +1,7 @@
 package com.yft.rippleup.ui.screens.onboarding
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -19,6 +21,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -33,10 +37,16 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.KeyboardArrowLeft
+import androidx.compose.material.icons.outlined.Close
+import com.yft.rippleup.data.remote.Config
 import com.yft.rippleup.ui.components.CircleIconButton
 import com.yft.rippleup.ui.components.GradientButton
 import com.yft.rippleup.ui.components.noRippleClickable
 import com.yft.rippleup.ui.theme.*
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * p23-24 — Sign Up / Log In with the mint segmented control.
@@ -79,6 +89,8 @@ private fun AuthForm(
     var show by remember { mutableStateOf(false) }
     var err by remember { mutableStateOf("") }
     var needsPersonalisation by remember { mutableStateOf(true) }
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
     Column(
         modifier = Modifier
@@ -90,7 +102,7 @@ private fun AuthForm(
     ) {
         Spacer(Modifier.height(24.dp))
         CircleIconButton(onClick = { }) {
-            Text("‹", color = Ink, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            androidx.compose.material3.Icon(Icons.Outlined.KeyboardArrowLeft, contentDescription = "Back", tint = Ink, modifier = Modifier.size(20.dp))
         }
         Spacer(Modifier.height(20.dp))
         SegmentedTabs(tab) { setTab(it); err = "" }
@@ -155,18 +167,52 @@ private fun AuthForm(
                     .noRippleClickable { openSub(SubRoute.FORGOT) },
             )
             Spacer(Modifier.height(6.dp))
-            // Prompt-required: one-tap fill of the local test account.
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Box(
+                    Modifier
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(Mint)
+                        .noRippleClickable {
+                            email = com.yft.rippleup.data.Repo.TEST_USER
+                            pass = com.yft.rippleup.data.Repo.TEST_PASS
+                        }
+                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                ) {
+                    Text("⚡ Fill test account (admin / rudra)", color = Teal, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+            // Google sign-in (cloud accounts)
             Box(
                 Modifier
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(Mint)
-                    .noRippleClickable {
-                        email = com.yft.rippleup.data.Repo.TEST_USER
-                        pass = com.yft.rippleup.data.Repo.TEST_PASS
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(Color.White)
+                    .border(1.dp, Color(0x1F000000), RoundedCornerShape(24.dp))
+                    .noRippleClickable(enabled = Config.googleConfigured) {
+                        scope.launch {
+                            val idToken = googleIdToken(context)
+                            if (idToken != null) {
+                                vm.loginWithGoogle(idToken) { ok, msg ->
+                                    err = msg
+                                    if (ok) onAuthed()
+                                }
+                            } else err = "Google sign-in cancelled."
+                        }
                     }
-                    .padding(horizontal = 10.dp, vertical = 6.dp)
+                    .padding(vertical = 12.dp),
+                contentAlignment = Alignment.Center,
             ) {
-                Text("⚡ Fill test account (admin / rudra)", color = Teal, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("G", color = Color(0xFF4285F4), fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        if (Config.googleConfigured) "Continue with Google"
+                        else "Google sign-in (setup pending — see README)",
+                        color = if (Config.googleConfigured) Ink else Color(0xFF9AA6A3),
+                        fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
+                    )
+                }
             }
         } else {
             Spacer(Modifier.height(10.dp))
@@ -335,4 +381,24 @@ fun MintField(
             },
         )
     }
+}
+
+
+/** Google Credential Manager -> ID token for the Supabase grant. */
+private suspend fun googleIdToken(context: android.content.Context): String? = withContext(kotlinx.coroutines.Dispatchers.IO) {
+    runCatching {
+        val cm = androidx.credentials.CredentialManager.create(context)
+        val option = com.google.android.libraries.identity.googleid.GetGoogleIdOption.Builder()
+            .setServerClientId(Config.GOOGLE_WEB_CLIENT_ID)
+            .setFilterByAuthorizedAccounts(false)
+            .build()
+        val request = androidx.credentials.GetCredentialRequest.Builder().addCredentialOption(option).build()
+        val result = cm.getCredential(context, request)
+        val cred = result.credential
+        if (cred is androidx.credentials.CustomCredential &&
+            cred.type == com.google.android.libraries.identity.googleid.GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
+        ) {
+            com.google.android.libraries.identity.googleid.GoogleIdTokenCredential.createFrom(cred.data).idToken
+        } else null
+    }.getOrNull()
 }

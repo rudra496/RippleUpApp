@@ -16,6 +16,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
@@ -86,7 +90,12 @@ fun CloseX(onClose: () -> Unit) {
             .noRippleClickable { onClose() },
         contentAlignment = Alignment.Center,
     ) {
-        Text("✕", color = Ink, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+        androidx.compose.material3.Icon(
+            androidx.compose.material.icons.Icons.Outlined.Close,
+            contentDescription = "Close",
+            tint = Ink,
+            modifier = Modifier.size(17.dp),
+        )
     }
 }
 
@@ -173,10 +182,12 @@ fun EditListSheet(vm: AppViewModel, ripples: List<RippleEntity>, onClose: () -> 
                                 },
                             contentAlignment = Alignment.Center,
                         ) {
-                            Text(
-                                if (removed) "↺" else "🗑",
-                                fontSize = 13.sp,
-                                color = if (removed) Teal else DangerRed,
+                            androidx.compose.material3.Icon(
+                                if (removed) androidx.compose.material.icons.Icons.Outlined.Refresh
+                                else androidx.compose.material.icons.Icons.Outlined.Delete,
+                                contentDescription = if (removed) "Restore" else "Remove",
+                                tint = if (removed) Teal else DangerRed,
+                                modifier = Modifier.size(17.dp),
                             )
                         }
                     }

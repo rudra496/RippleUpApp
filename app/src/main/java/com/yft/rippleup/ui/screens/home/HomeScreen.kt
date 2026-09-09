@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -156,20 +157,14 @@ fun HomeScreen(
 /** Pencil-in-rounded-square edit icon (p01 asset redrawn as icons). */
 @Composable
 fun EditSquareIcon(onClick: () -> Unit) {
-    Box(
-        Modifier
+    Icon(
+        Icons.Outlined.Edit,
+        contentDescription = "Edit list",
+        tint = Ink,
+        modifier = Modifier
             .noRippleClickable { onClick() }
-            .padding(3.dp)
-    ) {
-        Box(
-            Modifier
-                .size(22.dp)
-                .border(1.6.dp, Ink, RoundedCornerShape(6.dp)),
-            contentAlignment = Alignment.Center,
-        ) {
-            androidx.compose.material3.Text("✎", fontSize = 11.sp, color = Ink)
-        }
-    }
+            .size(20.dp),
+    )
 }
 
 /** Mon–Sun white r8 cards: gold checks, glowing today, gray drops. */

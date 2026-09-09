@@ -59,7 +59,10 @@ import com.yft.rippleup.ui.screens.onboarding.PersonaliseScreen
 import com.yft.rippleup.ui.screens.onboarding.SplashScreen
 import com.yft.rippleup.ui.screens.profile.ProfileScreen
 import com.yft.rippleup.ui.screens.rewards.RewardsScreen
+import com.yft.rippleup.ui.screens.admin.AdminScreen
+import com.yft.rippleup.ui.screens.profile.MyVerificationsScreen
 import com.yft.rippleup.ui.screens.verify.QrScanScreen
+import com.yft.rippleup.ui.screens.verify.VerificationReceiptScreen
 import com.yft.rippleup.ui.screens.verify.VerifiedScreen
 import com.yft.rippleup.ui.screens.verify.VerifyingScreen
 import com.yft.rippleup.ui.screens.verify.VerifyActionScreen
@@ -78,6 +81,9 @@ object Routes {
     const val VERIFYING = "verifying"
     const val VERIFIED = "verified"
     const val QR_SCAN = "qr_scan"
+    const val ADMIN = "admin"
+    const val MY_VERIFICATIONS = "my_verifications"
+    const val RECEIPT = "receipt"
 }
 
 @Composable
@@ -90,6 +96,7 @@ fun RippleUpAppRoot(vm: AppViewModel) {
     var showNotifs by remember { mutableStateOf(false) }
     var showEvent by remember { mutableStateOf(false) }
     var pendingVerify by remember { mutableStateOf<PendingVerify?>(null) }
+    var lastReceipt by remember { mutableStateOf<com.yft.rippleup.data.remote.CloudVerification?>(null) }
 
     NavHost(navController = nav, startDestination = start) {
         composable(Routes.SPLASH) {
@@ -204,6 +211,8 @@ fun RippleUpAppRoot(vm: AppViewModel) {
                     onOpenNotifSettings = { },
                     onOpenHelp = { },
                     onOpenPrivacy = { },
+                    onOpenAdmin = { nav.navigate(Routes.ADMIN) },
+                    onOpenMyVerifications = { nav.navigate(Routes.MY_VERIFICATIONS) },
                 )
             }
         }
@@ -226,23 +235,35 @@ fun RippleUpAppRoot(vm: AppViewModel) {
         }
         composable(Routes.VERIFIED) {
             val pending = pendingVerify
-            VerifiedScreen(pending = pending ?: defaultCustomPending()) {
+            VerifiedScreen(
+                pending = pending ?: defaultCustomPending(),
+                showReceiptButton = lastReceipt != null,
+                onViewReceipt = { nav.navigate(Routes.RECEIPT) },
+            ) {
                 pendingVerify = null
                 nav.navigate(Routes.HOME) { popUpTo(Routes.HOME) { inclusive = true } }
             }
         }
         composable(Routes.QR_SCAN) {
             QrScanScreen(
-                onDetected = {
+                vm = vm,
+                onVerified = { ver ->
+                    lastReceipt = ver
                     pendingVerify = PendingVerify(
-                        "Donated clothes @ ThriftUp",
-                        "Partner-verified at ThriftUp Store",
-                        500, "donate", 1.2f, viaQr = true,
+                        "Partner action verified",
+                        "QR-verified at partner location",
+                        500, "refill", 1.2f, viaQr = true,
                     )
                     nav.navigate(Routes.VERIFYING)
                 },
+                onError = { },
                 onClose = { nav.popBackStack() },
             )
+        }
+        composable(Routes.ADMIN) { AdminScreen(vm, onBack = { nav.popBackStack() }) }
+        composable(Routes.MY_VERIFICATIONS) { MyVerificationsScreen(vm, onBack = { nav.popBackStack() }) }
+        composable(Routes.RECEIPT) {
+            VerificationReceiptScreen(receiptId = lastReceipt?.id, vm = vm) { nav.popBackStack() }
         }
     }
 
@@ -300,8 +321,8 @@ fun TabScaffold(
                 Box(
                     Modifier
                         .align(Alignment.TopCenter)
-                        .offset(y = (-28).dp)
-                        .size(62.dp)
+                        .offset(y = (-26).dp)
+                        .size(58.dp)
                         .shadow(6.dp, CircleShape)
                         .clip(CircleShape)
                         .background(Color.White)
@@ -311,7 +332,7 @@ fun TabScaffold(
                         .noRippleClickable { setShowChoice(true) },
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(Icons.Outlined.QrCode2, contentDescription = "Verify a ripple", tint = Color.White, modifier = Modifier.size(26.dp))
+                    Icon(Icons.Outlined.QrCode2, contentDescription = "Verify a ripple", tint = Color.White, modifier = Modifier.size(24.dp))
                 }
                 // pill bar
                 Row(
@@ -326,7 +347,7 @@ fun TabScaffold(
                 ) {
                     NavItem(Icons.Outlined.Home, "Home", route == Routes.HOME, Modifier.weight(1f)) { nav.navigateTop(Routes.HOME) }
                     NavItem(Icons.Outlined.Eco, "Discover", route == Routes.DISCOVER, Modifier.weight(1f)) { nav.navigateTop(Routes.DISCOVER) }
-                    Spacer(Modifier.width(64.dp)) // center gap for the FAB
+                    Spacer(Modifier.width(96.dp)) // center gap for the FAB (fixes label overlap)
                     NavItem(Icons.Outlined.CardGiftcard, "Rewards", route == Routes.REWARDS, Modifier.weight(1f)) { nav.navigateTop(Routes.REWARDS) }
                     NavItem(Icons.Outlined.Person, "Profile", route == Routes.PROFILE, Modifier.weight(1f)) { nav.navigateTop(Routes.PROFILE) }
                     Spacer(Modifier.width(6.dp))

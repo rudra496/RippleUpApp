@@ -1,5 +1,7 @@
 package com.yft.rippleup.data
 
+import com.yft.rippleup.data.db.RippleEntity
+import com.yft.rippleup.util.Guard
 import java.security.MessageDigest
 
 /** Static helpers shared with the Android build (auth hashing + demo constants). */
@@ -16,6 +18,9 @@ object Repo {
     const val TEST_PASS = "rudra"
     const val TEST_FIRST = "Saara"
     const val TEST_LAST = "Rodriguez"
+
+    fun tamperTag(r: RippleEntity): String =
+        Guard.tag(r.userEmail, r.title, r.points, r.status, r.createdAt)
 
     /** Display baseline so the demo account matches the PDF numbers on first launch. */
     const val BASE_POINTS = 12_090          // + seeded 360 earned = 12,450 RP

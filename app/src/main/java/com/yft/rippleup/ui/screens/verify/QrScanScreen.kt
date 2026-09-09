@@ -2,6 +2,7 @@ package com.yft.rippleup.ui.screens.verify
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.CameraSelector
@@ -30,15 +31,14 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.TextStyle
@@ -52,16 +52,27 @@ import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.common.InputImage
 import com.yft.rippleup.ui.components.noRippleClickable
 import com.yft.rippleup.ui.theme.*
+import com.yft.rippleup.util.GeoHelper
+import com.yft.rippleup.util.QrPayload
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.util.concurrent.Executors
 
-/** p49 — Scan QR Code: dark screen, real camera preview, teal brackets + scan line. */
+/**
+ * p49 — Scan QR Code: real camera + MLKit; the payload must be a signed RippleUp
+ * location QR. On detection: GPS fix -> geofence check -> cloud verification
+ * (who + where) -> receipt.
+ */
 @Composable
 fun QrScanScreen(
-    onDetected: () -> Unit,
+    vm: com.yft.rippleup.ui.AppViewModel,
+    onVerified: (com.yft.rippleup.data.remote.CloudVerification?) -> Unit,
+    onError: (String) -> Unit,
     onClose: () -> Unit,
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    val scope = rememberCoroutineScope()
     var hasPermission by remember {
         mutableStateOf(
             ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
@@ -72,6 +83,8 @@ fun QrScanScreen(
     ) { hasPermission = it }
     LaunchedEffect(Unit) { if (!hasPermission) permissionLauncher.launch(Manifest.permission.CAMERA) }
 
+    var status by remember { mutableStateOf("Point the camera at a RippleUp QR") }
+    var processing by remember { mutableStateOf(false) }
     var detected by remember { mutableStateOf(false) }
     val executor = remember { Executors.newSingleThreadExecutor() }
     DisposableEffect(Unit) { onDispose { executor.shutdown() } }
@@ -125,27 +138,63 @@ fun QrScanScreen(
                                 .build()
                             val scanner = BarcodeScanning.getClient()
                             analysis.setAnalyzer(executor) { proxy ->
-                                if (detected) { proxy.close(); return@setAnalyzer }
+                                if (detected || processing) { proxy.close(); return@setAnalyzer }
                                 val media = proxy.image
                                 if (media == null) { proxy.close(); return@setAnalyzer }
-                                val img = InputImage.fromMediaImage(
-                                    media,
-                                    proxy.imageInfo.rotationDegrees,
-                                )
+                                val img = InputImage.fromMediaImage(media, proxy.imageInfo.rotationDegrees)
                                 scanner.process(img)
                                     .addOnSuccessListener { codes ->
-                                        if (codes.isNotEmpty() && !detected) {
+                                        val raw = codes.firstOrNull()?.rawValue
+                                        if (raw != null && !detected && !processing) {
                                             detected = true
-                                            onDetected()
+                                            processing = true
+                                            status = "QR found — checking location…"
+                                            scope.launch {
+                                                val parsed = QrPayload.parse(raw)
+                                                when {
+                                                    parsed == null -> {
+                                                        detected = false; processing = false
+                                                        status = "Not a RippleUp QR — keep scanning"
+                                                    }
+                                                    !QrPayload.isValid(parsed) -> {
+                                                        detected = false; processing = false
+                                                        status = "Invalid QR signature — report this poster"
+                                                    }
+                                                    else -> {
+                                                        val location = vm.cloud.fetchLocation(parsed.locationId)
+                                                        if (location == null) {
+                                                            detected = false; processing = false
+                                                            status = "Unknown location — is the cloud configured?"
+                                                        } else {
+                                                            status = "Getting your GPS position…"
+                                                            val loc = GeoHelper.currentLocation(context)
+                                                            val (ver, err) = vm.recordQrVerification(
+                                                                location = location,
+                                                                userLat = loc?.latitude,
+                                                                userLng = loc?.longitude,
+                                                                device = "${Build.MANUFACTURER} ${Build.MODEL}".trim(),
+                                                                title = "Partner action @ ${location.name}",
+                                                                subtitle = "QR-verified at ${location.name}",
+                                                                points = 500,
+                                                                actionKey = "refill",
+                                                                co2eGrams = 1200,
+                                                            )
+                                                            if (ver != null) onVerified(ver)
+                                                            else {
+                                                                detected = false; processing = false
+                                                                status = err ?: "Verification failed — try again"
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
                                         }
                                     }
                                     .addOnCompleteListener { proxy.close() }
                             }
                             runCatching {
                                 provider.unbindAll()
-                                provider.bindToLifecycle(
-                                    lifecycleOwner, CameraSelector.DEFAULT_BACK_CAMERA, preview, analysis,
-                                )
+                                provider.bindToLifecycle(lifecycleOwner, CameraSelector.DEFAULT_BACK_CAMERA, preview, analysis)
                             }
                         }, ContextCompat.getMainExecutor(ctx))
                         previewView
@@ -161,10 +210,17 @@ fun QrScanScreen(
                     modifier = Modifier.padding(horizontal = 40.dp),
                 )
             }
-            // brackets + scan line overlay
             ViewfinderOverlay()
         }
-        Spacer(Modifier.height(24.dp))
+        // live status strip
+        Text(
+            status,
+            color = if (processing) Color(0xFF35D0C0) else Color(0xFF9FB3AE),
+            fontSize = 13.sp,
+            fontWeight = FontWeight.SemiBold,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth().padding(vertical = 14.dp),
+        )
     }
 }
 
@@ -174,7 +230,7 @@ private fun ViewfinderOverlay() {
     LaunchedEffect(Unit) {
         while (true) {
             lineT = (lineT + 0.012f) % 1f
-            kotlinx.coroutines.delay(16)
+            delay(16)
         }
     }
     Canvas(Modifier.size(240.dp)) {
@@ -183,7 +239,6 @@ private fun ViewfinderOverlay() {
         val w = size.width
         val h = size.height
         val c = Teal
-        // corner brackets
         fun tl() = listOf(Offset(0f, bracket) to Offset(0f, stroke / 2), Offset(0f, 0f) to Offset(bracket, 0f))
         fun bl() = listOf(Offset(0f, h - bracket) to Offset(0f, h - stroke / 2), Offset(0f, h) to Offset(bracket, h))
         fun tr() = listOf(Offset(w - bracket, 0f) to Offset(w, 0f), Offset(w, stroke / 2) to Offset(w, bracket))
@@ -191,7 +246,6 @@ private fun ViewfinderOverlay() {
         listOf(tl(), bl(), tr(), br()).flatten().forEach { (a, b) ->
             drawLine(c, a, b, strokeWidth = stroke, cap = StrokeCap.Round)
         }
-        // scan line
         val y = h * (0.25f + lineT * 0.5f)
         drawLine(
             Color(0xFF35D0C0),

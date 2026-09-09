@@ -134,6 +134,16 @@ class RippleStore {
         update { s -> s.copy(ripples = s.ripples.filterNot { it.id == id }) }
     }
 
+    /** Insert a pre-built DTO (assigns an id when 0) — used by cloud pull. */
+    fun insertLocal(dto: RippleDto) {
+        val fixed = if (dto.id == 0L) dto.copy(id = nextId++) else dto
+        update { it.copy(ripples = it.ripples + fixed) }
+    }
+
+    fun updateRippleLocal(dto: RippleDto) {
+        update { s -> s.copy(ripples = s.ripples.map { if (it.id == dto.id) dto else it }) }
+    }
+
     // ---- helpers --------------------------------------------------------------
 
     private fun tagOf(dto: RippleDto): String =

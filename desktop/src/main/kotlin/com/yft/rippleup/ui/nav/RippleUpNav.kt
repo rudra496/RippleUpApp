@@ -55,7 +55,10 @@ import com.yft.rippleup.ui.screens.onboarding.PersonaliseScreen
 import com.yft.rippleup.ui.screens.onboarding.SplashScreen
 import com.yft.rippleup.ui.screens.profile.ProfileScreen
 import com.yft.rippleup.ui.screens.rewards.RewardsScreen
+import com.yft.rippleup.ui.screens.admin.AdminScreen
+import com.yft.rippleup.ui.screens.profile.MyVerificationsScreen
 import com.yft.rippleup.ui.screens.verify.QrScanScreen
+import com.yft.rippleup.ui.screens.verify.VerificationReceiptScreen
 import com.yft.rippleup.ui.screens.verify.VerifiedScreen
 import com.yft.rippleup.ui.screens.verify.VerifyingScreen
 import com.yft.rippleup.ui.screens.verify.VerifyActionScreen
@@ -79,6 +82,9 @@ object Routes {
     const val VERIFYING = "verifying"
     const val VERIFIED = "verified"
     const val QR_SCAN = "qr_scan"
+    const val ADMIN = "admin"
+    const val MY_VERIFICATIONS = "my_verifications"
+    const val RECEIPT = "receipt"
 }
 
 /** Minimal back-stack router (desktop fork of the Android NavHost). */
@@ -113,6 +119,7 @@ fun RippleUpAppRoot(vm: AppViewModel) {
     var showNotifs by remember { mutableStateOf(false) }
     var showEvent by remember { mutableStateOf(false) }
     var pendingVerify by remember { mutableStateOf<PendingVerify?>(null) }
+    var lastReceipt by remember { mutableStateOf<com.yft.rippleup.data.remote.CloudVerification?>(null) }
 
     val tabs = listOf(Routes.HOME, Routes.DISCOVER, Routes.REWARDS, Routes.PROFILE)
 
@@ -230,20 +237,30 @@ fun RippleUpAppRoot(vm: AppViewModel) {
                     }
                     Routes.VERIFYING -> VerifyingScreen(onDone = { router.push(Routes.VERIFIED) })
                     Routes.VERIFIED -> {
-                        VerifiedScreen(pending = pendingVerify ?: defaultCustomPending()) {
+                        VerifiedScreen(
+                            pending = pendingVerify ?: defaultCustomPending(),
+                            showReceiptButton = lastReceipt != null,
+                            onViewReceipt = { router.push(Routes.RECEIPT) },
+                        ) {
                             pendingVerify = null
                             router.resetTo(Routes.HOME)
                         }
                     }
+                    Routes.ADMIN -> AdminScreen(vm, onBack = { router.pop() })
+                    Routes.MY_VERIFICATIONS -> MyVerificationsScreen(vm, onBack = { router.pop() })
+                    Routes.RECEIPT -> VerificationReceiptScreen(receiptId = lastReceipt?.id, vm = vm) { router.pop() }
                     Routes.QR_SCAN -> QrScanScreen(
-                        onDetected = {
+                        vm = vm,
+                        onVerified = { ver ->
+                            lastReceipt = ver
                             pendingVerify = PendingVerify(
-                                "Donated clothes @ ThriftUp",
-                                "Partner-verified at ThriftUp Store",
-                                500, "donate", 1.2f, viaQr = true,
+                                "Partner action verified",
+                                "QR-verified at partner location",
+                                500, "refill", 1.2f, viaQr = true,
                             )
                             router.push(Routes.VERIFYING)
                         },
+                        onError = { },
                         onClose = { router.pop() },
                     )
                 }

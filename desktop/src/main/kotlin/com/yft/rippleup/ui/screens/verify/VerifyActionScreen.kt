@@ -309,6 +309,8 @@ private fun AnimatedDots() {
 @Composable
 fun VerifiedScreen(
     pending: PendingVerify,
+    showReceiptButton: Boolean = false,
+    onViewReceipt: () -> Unit = {},
     onContinue: () -> Unit,
 ) {
     val qr = pending.viaQr
@@ -373,6 +375,18 @@ fun VerifiedScreen(
                 Spacer(Modifier.width(8.dp))
                 Text("Claim 10% off next purchase", color = PromoText, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
             }
+        }
+        if (showReceiptButton) {
+            Spacer(Modifier.height(14.dp))
+            Text(
+                "View verification receipt ->",
+                color = Teal,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier
+                    .noRippleClickable { onViewReceipt() }
+                    .padding(6.dp),
+            )
         }
         Spacer(Modifier.weight(1f))
         GradientButton(

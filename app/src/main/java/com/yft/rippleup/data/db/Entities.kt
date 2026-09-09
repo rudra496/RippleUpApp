@@ -27,6 +27,8 @@ data class RippleEntity(
     val createdAt: Long,
     val demo: Boolean = false,              // seeded demo rows don't count toward caps
     val tamperTag: String = "",             // HMAC over the tamper-relevant fields
+    val cloudId: Long? = null,              // Supabase ripples.id once pushed
+    val synced: Boolean = false,            // pushed to cloud successfully
 )
 
 /** Simple key/value store for session + toggles. */

@@ -50,6 +50,15 @@ interface RippleDao {
 
     @Query("SELECT COUNT(*) FROM ripples WHERE userEmail = :email AND status > 0 AND title = :title")
     suspend fun countDone(email: String, title: String): Int
+
+    @Query("SELECT * FROM ripples WHERE userEmail = :email AND synced = 0 AND demo = 0")
+    suspend fun unsynced(email: String): List<RippleEntity>
+
+    @Query("SELECT * FROM ripples WHERE cloudId = :cloudId LIMIT 1")
+    suspend fun byCloudId(cloudId: Long): RippleEntity?
+
+    @Query("UPDATE ripples SET cloudId = :cloudId, synced = 1 WHERE id = :localId")
+    suspend fun markSynced(localId: Long, cloudId: Long)
 }
 
 @Dao
