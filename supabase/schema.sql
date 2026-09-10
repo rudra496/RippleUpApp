@@ -252,9 +252,9 @@ insert into public.badges (key,title,emoji,description,need_count,action_filter,
 on conflict (key) do nothing;
 
 insert into public.partner_locations (id,name,address,emoji,lat,lng,radius_m,qr_sig) values
-  ('loc_greencentre', 'Green Brew Cafe', 'Gulshan-1, Dhaka', 23.7925, 90.4078, 150, '0dc6f57329d951c2'),
-  ('loc_ecorecycle', 'EcoRecycle Hub', 'Dhanmondi, Dhaka', 23.7461, 90.3742, 200, '56a4470c410c2eab'),
-  ('loc_thriftup', 'ThriftUp Store', 'Banani, Dhaka', 23.7936, 90.4043, 150, '2b04071672d3dcf8')
+  ('loc_greencentre', 'Green Brew Cafe', 'Gulshan-1, Dhaka', 'C', 23.7925, 90.4078, 150, '0dc6f57329d951c2'),
+  ('loc_ecorecycle', 'EcoRecycle Hub', 'Dhanmondi, Dhaka', 'R', 23.7461, 90.3742, 200, '56a4470c410c2eab'),
+  ('loc_thriftup', 'ThriftUp Store', 'Banani, Dhaka', 'T', 23.7936, 90.4043, 150, '2b04071672d3dcf8')
 on conflict (id) do nothing;
 
 -- ============================================================
