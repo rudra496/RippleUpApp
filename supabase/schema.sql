@@ -5,11 +5,6 @@
 -- ============================================================
 create extension if not exists pgcrypto;
 
-create or replace function public.is_admin() returns boolean
-language sql stable security definer set search_path = public as $$
-  select exists (select 1 from public.profiles where id = auth.uid() and is_admin);
-$$;
-
 -- ---------- profiles ----------
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
@@ -22,6 +17,12 @@ create table if not exists public.profiles (
   longest_streak integer not null default 0,
   created_at timestamptz not null default now()
 );
+
+create or replace function public.is_admin() returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (select 1 from public.profiles where id = auth.uid() and is_admin);
+$$;
+
 
 create or replace function public.handle_new_user() returns trigger
 language plpgsql security definer set search_path = public as $$
