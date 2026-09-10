@@ -316,27 +316,11 @@ fun TabScaffold(
                 .padding(bottom = 10.dp)
         ) {
             Box(contentAlignment = Alignment.BottomCenter) {
-                Box(
-                    Modifier
-                        .align(Alignment.TopCenter)
-                        .offset(y = (-28).dp)
-                        .size(62.dp)
-                        .shadow(6.dp, CircleShape)
-                        .clip(CircleShape)
-                        .background(Color.White)
-                        .padding(5.dp)
-                        .clip(CircleShape)
-                        .background(if (showChoice) Orange else Teal)
-                        .noRippleClickable { setShowChoice(true) },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(Icons.Outlined.QrCode2, contentDescription = "Verify a ripple", tint = Color.White, modifier = Modifier.size(26.dp))
-                }
                 Row(
                     Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 14.dp)
-                        .height(66.dp)
+                        .height(68.dp)
                         .shadow(8.dp, RoundedCornerShape(28.dp))
                         .clip(RoundedCornerShape(28.dp))
                         .background(Color(0xF2FFFFFF)),
@@ -348,6 +332,22 @@ fun TabScaffold(
                     NavItem(Icons.Outlined.CardGiftcard, "Rewards", route == Routes.REWARDS, Modifier.weight(1f)) { router.navigateTop(Routes.REWARDS) }
                     NavItem(Icons.Outlined.Person, "Profile", route == Routes.PROFILE, Modifier.weight(1f)) { router.navigateTop(Routes.PROFILE) }
                     Spacer(Modifier.width(6.dp))
+                }
+                Box(
+                    Modifier
+                        .align(Alignment.TopCenter)
+                        .offset(y = (-24).dp)
+                        .size(60.dp)
+                        .shadow(6.dp, CircleShape)
+                        .clip(CircleShape)
+                        .background(Color.White)
+                        .padding(5.dp)
+                        .clip(CircleShape)
+                        .background(if (showChoice) Orange else Teal)
+                        .noRippleClickable { setShowChoice(true) },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(Icons.Outlined.QrCode2, contentDescription = "Verify a ripple", tint = Color.White, modifier = Modifier.size(26.dp))
                 }
             }
         }
