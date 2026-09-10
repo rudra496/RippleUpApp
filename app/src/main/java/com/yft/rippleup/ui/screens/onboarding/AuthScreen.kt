@@ -166,22 +166,6 @@ private fun AuthForm(
                     .align(Alignment.End)
                     .noRippleClickable { openSub(SubRoute.FORGOT) },
             )
-            Spacer(Modifier.height(6.dp))
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Box(
-                    Modifier
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(Mint)
-                        .noRippleClickable {
-                            email = com.yft.rippleup.data.Repo.TEST_USER
-                            pass = com.yft.rippleup.data.Repo.TEST_PASS
-                        }
-                        .padding(horizontal = 10.dp, vertical = 6.dp)
-                ) {
-                    Text("⚡ Fill test account (admin / rudra)", color = Teal, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
-                }
-            }
-            Spacer(Modifier.height(12.dp))
             // Google sign-in (cloud accounts)
             Box(
                 Modifier

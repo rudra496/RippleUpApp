@@ -317,12 +317,30 @@ fun TabScaffold(
                 .padding(bottom = 6.dp)
         ) {
             Box(contentAlignment = Alignment.BottomCenter) {
-                // FAB
+                // pill bar (drawn first, underneath)
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp)
+                        .height(68.dp)
+                        .shadow(8.dp, RoundedCornerShape(30.dp))
+                        .clip(RoundedCornerShape(30.dp))
+                        .background(Color(0xF7FFFFFF)),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    NavItem(Icons.Outlined.Home, "Home", route == Routes.HOME, Modifier.weight(1f)) { nav.navigateTop(Routes.HOME) }
+                    NavItem(Icons.Outlined.Eco, "Discover", route == Routes.DISCOVER, Modifier.weight(1f)) { nav.navigateTop(Routes.DISCOVER) }
+                    Spacer(Modifier.width(92.dp)) // center gap for the FAB
+                    NavItem(Icons.Outlined.CardGiftcard, "Rewards", route == Routes.REWARDS, Modifier.weight(1f)) { nav.navigateTop(Routes.REWARDS) }
+                    NavItem(Icons.Outlined.Person, "Profile", route == Routes.PROFILE, Modifier.weight(1f)) { nav.navigateTop(Routes.PROFILE) }
+                    Spacer(Modifier.width(6.dp))
+                }
+                // FAB — drawn LAST so nothing covers it
                 Box(
                     Modifier
                         .align(Alignment.TopCenter)
-                        .offset(y = (-26).dp)
-                        .size(58.dp)
+                        .offset(y = (-24).dp)
+                        .size(60.dp)
                         .shadow(6.dp, CircleShape)
                         .clip(CircleShape)
                         .background(Color.White)
@@ -332,25 +350,7 @@ fun TabScaffold(
                         .noRippleClickable { setShowChoice(true) },
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(Icons.Outlined.QrCode2, contentDescription = "Verify a ripple", tint = Color.White, modifier = Modifier.size(24.dp))
-                }
-                // pill bar
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 14.dp)
-                        .height(66.dp)
-                        .shadow(8.dp, RoundedCornerShape(28.dp))
-                        .clip(RoundedCornerShape(28.dp))
-                        .background(Color(0xF2FFFFFF)),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    NavItem(Icons.Outlined.Home, "Home", route == Routes.HOME, Modifier.weight(1f)) { nav.navigateTop(Routes.HOME) }
-                    NavItem(Icons.Outlined.Eco, "Discover", route == Routes.DISCOVER, Modifier.weight(1f)) { nav.navigateTop(Routes.DISCOVER) }
-                    Spacer(Modifier.width(96.dp)) // center gap for the FAB (fixes label overlap)
-                    NavItem(Icons.Outlined.CardGiftcard, "Rewards", route == Routes.REWARDS, Modifier.weight(1f)) { nav.navigateTop(Routes.REWARDS) }
-                    NavItem(Icons.Outlined.Person, "Profile", route == Routes.PROFILE, Modifier.weight(1f)) { nav.navigateTop(Routes.PROFILE) }
-                    Spacer(Modifier.width(6.dp))
+                    Icon(Icons.Outlined.QrCode2, contentDescription = "Verify a ripple", tint = Color.White, modifier = Modifier.size(25.dp))
                 }
             }
         }

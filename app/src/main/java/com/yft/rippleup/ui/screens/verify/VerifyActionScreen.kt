@@ -68,6 +68,7 @@ fun VerifyActionScreen(
     var photoUri by remember { mutableStateOf<android.net.Uri?>(null) }
     var rejectMsg by remember { mutableStateOf("") }
     var submitting by remember { mutableStateOf(false) }
+    var cameraError by remember { mutableStateOf<String?>(null) }
     val scope = androidx.compose.runtime.rememberCoroutineScope()
 
     val photoFile = remember {
@@ -79,7 +80,21 @@ fun VerifyActionScreen(
     }
     val cameraLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.TakePicture()
-    ) { ok -> if (ok) photoUri = photoUriPending }
+    ) { ok -> if (ok) photoUri = photoUriPending else cameraError = "Camera unavailable - pick from gallery instead" }
+    val galleryLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri != null) {
+            // copy into cache so the FileProvider uri pattern stays consistent
+            val dest = photoFile
+            runCatching {
+                context.contentResolver.openInputStream(uri)?.use { input ->
+                    dest.outputStream().use { output -> input.copyTo(output) }
+                }
+                photoUri = photoUriPending
+            }
+        }
+    }
 
     // countdown
     LaunchedEffect(Unit) {
@@ -164,7 +179,14 @@ fun VerifyActionScreen(
                 .background(if (captured) Mint else Color(0xFFF0F6F4))
                 .dashedBorder(1.5.dp, Teal, 16.dp)
                 .noRippleClickable {
-                    if (captured) photoUri = null else cameraLauncher.launch(photoUriPending)
+                    if (captured) {
+                        photoUri = null
+                    } else runCatching {
+                        cameraLauncher.launch(photoUriPending)
+                    }.onFailure {
+                        cameraError = "No camera app found - opening gallery"
+                        galleryLauncher.launch("image/*")
+                    }
                 },
             contentAlignment = Alignment.Center,
         ) {
@@ -207,6 +229,10 @@ fun VerifyActionScreen(
                     )
                 }
             }
+        }
+        cameraError?.let {
+            Spacer(Modifier.height(8.dp))
+            Text(it, color = Orange, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
         }
         if (rejectMsg.isNotEmpty()) {
             Spacer(Modifier.height(10.dp))
