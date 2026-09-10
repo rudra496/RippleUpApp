@@ -50,8 +50,10 @@ import com.yft.rippleup.ui.theme.*
 fun DiscoverScreen(
     vm: AppViewModel,
     onOpenNotifications: () -> Unit,
-    onStartVerifyFor: (DiscoverAction) -> Unit,
 ) {
+    var doneTitles by androidx.compose.runtime.remember {
+        androidx.compose.runtime.mutableStateOf(setOf<String>())
+    }
     var tab by remember { mutableIntStateOf(0) }
 
     Column(
@@ -126,7 +128,14 @@ fun DiscoverScreen(
                     modifier = Modifier.padding(horizontal = 20.dp),
                 )
                 Spacer(Modifier.height(10.dp))
-                Content.selfReport.forEach { a -> ActionCard(a) { onStartVerifyFor(a) } }
+                Content.selfReport.forEach { a ->
+                    ActionCard(a, done = a.title in doneTitles) {
+                        vm.commitSelfReported(
+                            com.yft.rippleup.ui.PendingVerify(a.title, a.note, a.points, a.actionKey, 0.05f, viaQr = false)
+                        ) { _, _ -> }
+                        doneTitles = doneTitles + a.title
+                    }
+                }
             }
             1 -> {
                 Text(
@@ -135,7 +144,14 @@ fun DiscoverScreen(
                     modifier = Modifier.padding(horizontal = 20.dp),
                 )
                 Spacer(Modifier.height(10.dp))
-                Content.partnerVerified.forEach { a -> ActionCard(a) { onStartVerifyFor(a) } }
+                Content.partnerVerified.forEach { a ->
+                    ActionCard(a, done = a.title in doneTitles) {
+                        vm.commitSelfReported(
+                            com.yft.rippleup.ui.PendingVerify(a.title, a.note, a.points, a.actionKey, 1.0f, viaQr = false)
+                        ) { _, _ -> }
+                        doneTitles = doneTitles + a.title
+                    }
+                }
             }
             else -> {
                 Spacer(Modifier.height(2.dp))
@@ -146,7 +162,7 @@ fun DiscoverScreen(
 }
 
 @Composable
-private fun ActionCard(a: DiscoverAction, onAdd: () -> Unit) {
+private fun ActionCard(a: DiscoverAction, done: Boolean = a.done, onAdd: () -> Unit) {
     Row(
         Modifier
             .fillMaxWidth()
@@ -186,11 +202,11 @@ private fun ActionCard(a: DiscoverAction, onAdd: () -> Unit) {
             Modifier
                 .size(34.dp)
                 .clip(CircleShape)
-                .background(if (a.done) Orange else Teal)
-                .noRippleClickable(enabled = !a.done) { onAdd() },
+                .background(if (done || a.done) Orange else Teal)
+                .noRippleClickable(enabled = !done && !a.done) { onAdd() },
             contentAlignment = Alignment.Center,
         ) {
-            Text(if (a.done) "✓" else "＋", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+            Text(if (done || a.done) "✓" else "＋", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
         }
     }
 }

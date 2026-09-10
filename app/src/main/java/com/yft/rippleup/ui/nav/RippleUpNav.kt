@@ -24,6 +24,7 @@ import androidx.compose.material.icons.outlined.QrCode2
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -46,6 +47,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.yft.rippleup.data.db.RippleEntity
 import com.yft.rippleup.ui.AppViewModel
+import com.yft.rippleup.ui.Boot
 import com.yft.rippleup.ui.PendingVerify
 import com.yft.rippleup.ui.components.noRippleClickable
 import com.yft.rippleup.ui.screens.discover.DiscoverScreen
@@ -54,8 +56,10 @@ import com.yft.rippleup.ui.screens.home.HomeScreen
 import com.yft.rippleup.ui.screens.home.NotificationsSheet
 import com.yft.rippleup.ui.screens.home.VerifyChoiceDialog
 import com.yft.rippleup.ui.screens.onboarding.AuthScreen
+import com.yft.rippleup.ui.screens.onboarding.PendingApprovalScreen
+import com.yft.rippleup.ui.screens.onboarding.SplashScreen
 import com.yft.rippleup.ui.screens.onboarding.OnboardingScreen
-import com.yft.rippleup.ui.screens.onboarding.PersonaliseScreen
+import com.yft.rippleup.ui.screens.onboarding.OnboardingScreen
 import com.yft.rippleup.ui.screens.onboarding.SplashScreen
 import com.yft.rippleup.ui.screens.profile.ProfileScreen
 import com.yft.rippleup.ui.screens.rewards.RewardsScreen
@@ -88,42 +92,32 @@ object Routes {
 
 @Composable
 fun RippleUpAppRoot(vm: AppViewModel) {
+    val boot by vm.boot.collectAsState()
+    when (boot) {
+        Boot.LOADING -> com.yft.rippleup.ui.screens.onboarding.SplashScreen()
+        Boot.ONBOARDING -> OnboardingScreen {
+            vm.markOnboarded()
+            vm.goToAuth()
+        }
+        Boot.AUTH -> AuthScreen(vm = vm)
+        Boot.PENDING_APPROVAL -> com.yft.rippleup.ui.screens.onboarding.PendingApprovalScreen(vm)
+        Boot.HOME -> HomeRoot(vm)
+        else -> com.yft.rippleup.ui.screens.onboarding.SplashScreen()
+    }
+}
+
+@Composable
+private fun HomeRoot(vm: AppViewModel) {
     val nav = rememberNavController()
-    val start = remember { vm.computeStart() }
 
     // flow-shared state
     var showChoice by remember { mutableStateOf(false) }
     var showNotifs by remember { mutableStateOf(false) }
     var showEvent by remember { mutableStateOf(false) }
     var pendingVerify by remember { mutableStateOf<PendingVerify?>(null) }
-    var lastReceipt by remember { mutableStateOf<com.yft.rippleup.data.remote.CloudVerification?>(null) }
+    var lastReceiptId by remember { mutableStateOf<Long?>(null) }
 
-    NavHost(navController = nav, startDestination = start) {
-        composable(Routes.SPLASH) {
-            SplashScreen {
-                nav.navigate(Routes.ONBOARDING) { popUpTo(Routes.SPLASH) { inclusive = true } }
-            }
-        }
-        composable(Routes.ONBOARDING) {
-            OnboardingScreen {
-                vm.markOnboarded()
-                nav.navigate(Routes.AUTH) { popUpTo(Routes.ONBOARDING) { inclusive = true } }
-            }
-        }
-        composable(Routes.AUTH) {
-            AuthScreen(
-                startTab = 1,
-                vm = vm,
-                onAuthed = { nav.navigate(Routes.HOME) { popUpTo(Routes.AUTH) { inclusive = true } } },
-                onNeedsPersonalisation = { nav.navigate(Routes.PERSONALISE) { popUpTo(Routes.AUTH) { inclusive = true } } },
-            )
-        }
-        composable(Routes.PERSONALISE) {
-            PersonaliseScreen {
-                nav.navigate(Routes.HOME) { popUpTo(Routes.PERSONALISE) { inclusive = true } }
-            }
-        }
-
+    NavHost(navController = nav, startDestination = Routes.HOME) {
         composable(Routes.HOME) {
             TabScaffold(
                 vm = vm, nav = nav, route = Routes.HOME,
@@ -142,10 +136,7 @@ fun RippleUpAppRoot(vm: AppViewModel) {
                     vm = vm,
                     onOpenNotifications = { showNotifs = true },
                     onOpenEvent = { showEvent = true },
-                    onStartVerify = { entity ->
-                        pendingVerify = entity?.toPending()
-                        nav.navigate(Routes.VERIFY_ACTION)
-                    },
+                    onLogAction = { showChoice = true },
                 )
             }
         }
@@ -166,11 +157,6 @@ fun RippleUpAppRoot(vm: AppViewModel) {
                 DiscoverScreen(
                     vm = vm,
                     onOpenNotifications = { showNotifs = true },
-                    onStartVerifyFor = { action ->
-                        vm.addPending(action.title, action.note, action.points, action.actionKey, kgFor(action.points))
-                        pendingVerify = PendingVerify(action.title, action.note, action.points, action.actionKey, kgFor(action.points), viaQr = false)
-                        nav.navigate(Routes.VERIFY_ACTION)
-                    },
                 )
             }
         }
@@ -237,7 +223,7 @@ fun RippleUpAppRoot(vm: AppViewModel) {
             val pending = pendingVerify
             VerifiedScreen(
                 pending = pending ?: defaultCustomPending(),
-                showReceiptButton = lastReceipt != null,
+                showReceiptButton = lastReceiptId != null,
                 onViewReceipt = { nav.navigate(Routes.RECEIPT) },
             ) {
                 pendingVerify = null
@@ -247,8 +233,8 @@ fun RippleUpAppRoot(vm: AppViewModel) {
         composable(Routes.QR_SCAN) {
             QrScanScreen(
                 vm = vm,
-                onVerified = { ver ->
-                    lastReceipt = ver
+                onVerified = { verId ->
+                    lastReceiptId = verId
                     pendingVerify = PendingVerify(
                         "Partner action verified",
                         "QR-verified at partner location",
@@ -263,19 +249,20 @@ fun RippleUpAppRoot(vm: AppViewModel) {
         composable(Routes.ADMIN) { AdminScreen(vm, onBack = { nav.popBackStack() }) }
         composable(Routes.MY_VERIFICATIONS) { MyVerificationsScreen(vm, onBack = { nav.popBackStack() }) }
         composable(Routes.RECEIPT) {
-            VerificationReceiptScreen(receiptId = lastReceipt?.id, vm = vm) { nav.popBackStack() }
+            VerificationReceiptScreen(receiptId = lastReceiptId, vm = vm) { nav.popBackStack() }
         }
     }
 
     // global sheets (PDF shows them over home)
     if (showNotifs) {
         NotificationsSheet(
+            vm = vm,
             onClose = { showNotifs = false },
             onLogAction = { showChoice = true },
         )
     }
     if (showEvent) {
-        EventDetailSheet(onClose = { showEvent = false })
+        EventDetailSheet(vm = vm, onClose = { showEvent = false })
     }
 }
 

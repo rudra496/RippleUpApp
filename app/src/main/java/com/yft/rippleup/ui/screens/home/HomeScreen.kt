@@ -6,6 +6,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -33,26 +35,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.geometry.RoundRect
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.graphics.drawscope.Stroke as DsStroke
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.yft.rippleup.R
-import com.yft.rippleup.data.Content
-import com.yft.rippleup.data.Event
-import com.yft.rippleup.data.db.RippleEntity
+import com.yft.rippleup.data.remote.CloudEvent
+import com.yft.rippleup.data.remote.CloudRipple
 import com.yft.rippleup.ui.AppViewModel
 import com.yft.rippleup.ui.components.CircleIconButton
 import com.yft.rippleup.ui.components.PillTag
@@ -60,16 +56,17 @@ import com.yft.rippleup.ui.components.RippleLogo
 import com.yft.rippleup.ui.components.noRippleClickable
 import com.yft.rippleup.ui.theme.*
 
-/** p03/p17/p68 — HOME. */
+/** p03/p17/p68 — HOME, fully driven by real cloud data. */
 @Composable
 fun HomeScreen(
     vm: AppViewModel,
     onOpenNotifications: () -> Unit,
     onOpenEvent: () -> Unit,
-    onStartVerify: (RippleEntity?) -> Unit,
+    onLogAction: () -> Unit,
 ) {
     val ripples by vm.ripples.collectAsState()
     val stats by vm.stats.collectAsState()
+    val events by vm.events.collectAsState()
     var showEdit by remember { mutableStateOf(false) }
 
     Box(Modifier.fillMaxSize().background(BgMain)) {
@@ -89,25 +86,20 @@ fun HomeScreen(
             ) {
                 RippleLogo(size = 42.dp)
                 CircleIconButton(bg = White, onClick = onOpenNotifications, badge = true) {
-                    Icon(
-                        Icons.Outlined.Notifications,
-                        contentDescription = "Notifications",
-                        tint = Ink,
-                        modifier = Modifier.size(18.dp),
-                    )
+                    Icon(Icons.Outlined.Notifications, contentDescription = "Notifications", tint = Ink, modifier = Modifier.size(18.dp))
                 }
             }
             Spacer(Modifier.height(14.dp))
-            CalendarStrip()
+            CalendarStrip(verifiedDays(vm.ripples.value))
             Spacer(Modifier.height(18.dp))
             Text(
-                "Hey ${vm.displayName.substringBefore(' ')}!",
+                "Hey ${vm.displayName}!",
                 style = TextStyle(fontSize = 24.sp, fontWeight = FontWeight.Bold),
                 color = Ink,
                 modifier = Modifier.padding(horizontal = 20.dp),
             )
             Spacer(Modifier.height(12.dp))
-            StreakCard(stats.streak, stats.longest, stats.pointsPill)
+            StreakCard(stats.streak, stats.longest, stats.points)
             Spacer(Modifier.height(20.dp))
             Row(
                 Modifier
@@ -117,33 +109,42 @@ fun HomeScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text("Today's Ripples list", style = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.Bold), color = Ink)
-                EditSquareIcon(onClick = { showEdit = true })
-            }
-            Spacer(Modifier.height(10.dp))
-            TimelineCard(ripples, onStartVerify = { onStartVerify(it) })
-            Spacer(Modifier.height(22.dp))
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Text("Upcoming Events", style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Bold), color = Ink)
-                Text(
-                    "See all", color = Teal, fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.noRippleClickable { onOpenEvent() },
+                Icon(
+                    Icons.Outlined.Edit,
+                    contentDescription = "Edit list",
+                    tint = Ink,
+                    modifier = Modifier.noRippleClickable { showEdit = true }.size(20.dp),
                 )
             }
             Spacer(Modifier.height(10.dp))
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                Content.events.take(2).forEach { ev -> EventCard(ev) { onOpenEvent() } }
-                Box(Modifier.width(120.dp)) {
-                    EventCard(Content.events[2]) { onOpenEvent() }
+            TimelineCard(ripples.filter { it.created_at?.startsWith(todayKey()) == true }, onLogAction)
+            Spacer(Modifier.height(22.dp))
+            if (events.isNotEmpty()) {
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text("Upcoming Events", style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Bold), color = Ink)
+                    Text(
+                        "See all", color = Teal, fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.noRippleClickable { onOpenEvent() },
+                    )
+                }
+                Spacer(Modifier.height(10.dp))
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    events.take(2).forEach { ev -> EventCard(ev) { onOpenEvent() } }
+                    if (events.size > 2) {
+                        Box(Modifier.width(120.dp)) {
+                            EventCard(events[2]) { onOpenEvent() }
+                        }
+                    }
                 }
             }
         }
@@ -154,30 +155,44 @@ fun HomeScreen(
     }
 }
 
-/** Pencil-in-rounded-square edit icon (p01 asset redrawn as icons). */
-@Composable
-fun EditSquareIcon(onClick: () -> Unit) {
-    Icon(
-        Icons.Outlined.Edit,
-        contentDescription = "Edit list",
-        tint = Ink,
-        modifier = Modifier
-            .noRippleClickable { onClick() }
-            .size(20.dp),
-    )
+private fun todayKey(): String =
+    java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())
+
+/** Days THIS week (Mon..today) that have at least one verified ripple. */
+private fun verifiedDays(ripples: List<CloudRipple>): Set<String> {
+    val fmt = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+    val cal = java.util.Calendar.getInstance()
+    val todayIdx = (cal.get(java.util.Calendar.DAY_OF_WEEK) + 5) % 7
+    val days = mutableSetOf<String>()
+    for (off in 0..todayIdx) {
+        val c = cal.clone() as java.util.Calendar
+        c.add(java.util.Calendar.DAY_OF_YEAR, off - todayIdx)
+        days.add(fmt.format(c.time))
+    }
+    return ripples.filter { it.status == "self" || it.status == "qr" }
+        .mapNotNull { it.created_at?.take(10) }
+        .toSet()
+        .intersect(days)
 }
 
-/** Mon–Sun white r8 cards: gold checks, glowing today, gray drops. */
+/** Mon–Sun white r8 cards: gold checks for verified days, glowing today, gray drops. */
 @Composable
-fun CalendarStrip() {
+fun CalendarStrip(verifiedDays: Set<String> = emptySet()) {
+    val cal = java.util.Calendar.getInstance()
+    val todayIdx = (cal.get(java.util.Calendar.DAY_OF_WEEK) + 5) % 7 // Mon=0
     Row(
         Modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp),
         horizontalArrangement = Arrangement.spacedBy(7.dp),
     ) {
-        val days = listOf("Mon" to 1, "Tue" to 1, "Wed" to 1, "Thu" to 2, "Fri" to 0, "Sat" to 0, "Sun" to 0)
-        days.forEach { (label, state) ->
+        val labels = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+        labels.forEachIndexed { idx, label ->
+            val state = when {
+                idx == todayIdx -> 2
+                verifiedDays.contains(dayKeyFor(cal, idx - todayIdx)) -> 1
+                else -> 0
+            }
             Column(
                 Modifier
                     .weight(1f)
@@ -227,9 +242,16 @@ fun CalendarStrip() {
     }
 }
 
-/** Teal gradient streak card with progress ring + pills (p03). */
+private fun dayKeyFor(base: java.util.Calendar, offsetDays: Int): String {
+    val c = base.clone() as java.util.Calendar
+    c.add(java.util.Calendar.DAY_OF_YEAR, offsetDays)
+    return java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(c.time)
+}
+
+/** Teal gradient streak card with progress ring + pills — REAL numbers only. */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun StreakCard(streak: Int, longest: Int, pointsPill: Int) {
+fun StreakCard(streak: Int, longest: Int, totalPoints: Int) {
     Row(
         Modifier
             .fillMaxWidth()
@@ -240,7 +262,7 @@ fun StreakCard(streak: Int, longest: Int, pointsPill: Int) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(contentAlignment = Alignment.Center) {
-            StreakRing(fraction = streak.toFloat() / longest.coerceAtLeast(1))
+            StreakRing(fraction = streak.toFloat() / longest.coerceAtLeast(7))
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("$streak", style = TextStyle(fontSize = 26.sp, fontWeight = FontWeight.Bold), color = InkSoft)
                 Text("Days", fontSize = 12.sp, fontWeight = FontWeight.Medium, color = Color(0xFF96BAB0))
@@ -249,31 +271,31 @@ fun StreakCard(streak: Int, longest: Int, pointsPill: Int) {
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(
-                "Your Ripples have been adding up!",
+                "Your Ripples are adding up!",
                 style = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.SemiBold, lineHeight = 20.sp),
                 color = InkSoft,
             )
             Spacer(Modifier.height(3.dp))
             Text(
-                "You've helped avoid an estimated 20 g CO₂e this week.",
+                "Every verified action avoids real CO₂e. Keep the streak going!",
                 style = TextStyle(fontSize = 12.sp, lineHeight = 16.sp),
                 color = Secondary,
             )
             Spacer(Modifier.height(8.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 PillTag("Longest streak", Color.White, TealPill)
                 PillTag("$longest Days", TealPill, TealPaleText, bold = true)
                 Spacer(Modifier.width(2.dp))
                 PillTag("Ripple Points", Color.White, TealPill)
-                PillTag("${pointsPill}+ pts", TealPill, TealPaleText, bold = true)
+                PillTag("${com.yft.rippleup.util.Fmt.grouped(totalPoints)} pts", TealPill, TealPaleText, bold = true)
             }
         }
     }
 }
 
-/** Ring: track circle + teal arc + small drop at the arc tail. */
+/** Ring: track circle + teal arc. */
 @Composable
-fun StreakRing(fraction: Float, modifier: Modifier = Modifier, tint: Color = Teal, sizeDp: Dp = 86.dp) {
+fun StreakRing(fraction: Float, modifier: Modifier = Modifier, tint: Color = Teal, sizeDp: androidx.compose.ui.unit.Dp = 86.dp) {
     Box(modifier.size(sizeDp), contentAlignment = Alignment.Center) {
         Canvas(Modifier.size(sizeDp)) {
             val stroke = 8.dp.toPx()
@@ -283,22 +305,22 @@ fun StreakRing(fraction: Float, modifier: Modifier = Modifier, tint: Color = Tea
                 startAngle = 0f, sweepAngle = 360f, useCenter = false,
                 topLeft = androidx.compose.ui.geometry.Offset(inset, inset),
                 size = androidx.compose.ui.geometry.Size(this.size.width - inset * 2, this.size.height - inset * 2),
-                style = DsStroke(width = stroke, cap = androidx.compose.ui.graphics.StrokeCap.Round),
+                style = Stroke(width = stroke, cap = androidx.compose.ui.graphics.StrokeCap.Round),
             )
             drawArc(
                 color = tint,
-                startAngle = 0f, sweepAngle = 360f * fraction.coerceIn(0.05f, 1f), useCenter = false,
+                startAngle = 0f, sweepAngle = 360f * fraction.coerceIn(0f, 1f), useCenter = false,
                 topLeft = androidx.compose.ui.geometry.Offset(inset, inset),
                 size = androidx.compose.ui.geometry.Size(this.size.width - inset * 2, this.size.height - inset * 2),
-                style = DsStroke(width = stroke, cap = androidx.compose.ui.graphics.StrokeCap.Round),
+                style = Stroke(width = stroke, cap = androidx.compose.ui.graphics.StrokeCap.Round),
             )
         }
     }
 }
 
-/** Big white card with the dashed timeline. */
+/** White card with the dashed timeline — real logged ripples only, honest states. */
 @Composable
-fun TimelineCard(ripples: List<RippleEntity>, onStartVerify: (RippleEntity) -> Unit) {
+fun TimelineCard(ripples: List<CloudRipple>, onLogAction: () -> Unit) {
     Column(
         Modifier
             .fillMaxWidth()
@@ -308,25 +330,40 @@ fun TimelineCard(ripples: List<RippleEntity>, onStartVerify: (RippleEntity) -> U
             .padding(horizontal = 18.dp, vertical = 14.dp),
     ) {
         Text(
-            "Thursday, Sept 19",
+            java.text.SimpleDateFormat("EEEE, MMM d", java.util.Locale.US)
+                .format(java.util.Date()),
             style = TextStyle(fontSize = 12.sp),
             color = Secondary,
             modifier = Modifier.fillMaxWidth(),
             textAlign = TextAlign.Center,
         )
         Spacer(Modifier.height(12.dp))
-        ripples.forEachIndexed { i, r ->
-            TimelineRow(r, isLast = i == ripples.lastIndex, onStartVerify = { onStartVerify(r) })
-            if (i != ripples.lastIndex) Spacer(Modifier.height(4.dp))
+        if (ripples.isEmpty()) {
+            Text(
+                "No ripples yet today.\nLog your first action below!",
+                style = TextStyle(fontSize = 13.sp, lineHeight = 19.sp),
+                color = Secondary,
+                modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
+                textAlign = TextAlign.Center,
+            )
+        } else {
+            ripples.forEachIndexed { i, r ->
+                TimelineRow(r, isLast = i == ripples.lastIndex)
+                if (i != ripples.lastIndex) Spacer(Modifier.height(4.dp))
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+        Box(Modifier.align(Alignment.CenterHorizontally)) {
+            PendingSelfReportBox(onTap = onLogAction)
         }
     }
 }
 
 @Composable
-fun TimelineRow(r: RippleEntity, isLast: Boolean, onStartVerify: () -> Unit) {
+fun TimelineRow(r: CloudRipple, isLast: Boolean) {
     Row {
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(34.dp)) {
-            val done = r.status > 0
+            val done = r.status == "self" || r.status == "qr"
             Box(
                 Modifier
                     .size(26.dp)
@@ -338,7 +375,7 @@ fun TimelineRow(r: RippleEntity, isLast: Boolean, onStartVerify: () -> Unit) {
                 if (done) Text("✓", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
             }
             if (!isLast) {
-                androidx.compose.foundation.Canvas(
+                Canvas(
                     Modifier
                         .width(2.dp)
                         .height(64.dp)
@@ -357,73 +394,66 @@ fun TimelineRow(r: RippleEntity, isLast: Boolean, onStartVerify: () -> Unit) {
         Column(Modifier.weight(1f)) {
             Text(r.title, style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Bold), color = Ink)
             Spacer(Modifier.height(2.dp))
-            Text(r.subtitle, style = TextStyle(fontSize = 12.sp), color = Color(0xFF4B5563))
+            Text(r.subtitle ?: "", style = TextStyle(fontSize = 12.sp), color = Color(0xFF4B5563))
             Spacer(Modifier.height(6.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 when (r.status) {
-                    1 -> { PillTag("Self Reported", TagBg, GrayTag); PillTag("+${r.points} pts", Orange, Color.White, bold = true) }
-                    2 -> { PillTag("QR Reported", TagBg, GrayTag); PillTag("+${r.points} pts", Orange, Color.White, bold = true) }
-                    else -> { PillTag("Self report", TagBg, GrayTag); PillTag("+${r.points} pts", Gray, Color(0xFFFFFDF7), bold = true) }
+                    "self" -> { PillTag("Self Reported", TagBg, GrayTag); PillTag("+${r.points} pts", Orange, Color.White, bold = true) }
+                    "qr" -> { PillTag("QR Verified", TagBg, GrayTag); PillTag("+${r.points} pts", Orange, Color.White, bold = true) }
+                    "pending_review" -> { PillTag("Pending review", TagBg, GrayTag); PillTag("+${r.points} pts", Gray, Color(0xFFFFFDF7), bold = true) }
+                    else -> PillTag(r.status, TagBg, GrayTag)
                 }
             }
             Spacer(Modifier.height(10.dp))
         }
-        when {
-            r.art == "veg" -> RoundedThumb(R.drawable.veg)
-            r.art == "balloon" -> RoundedThumb(R.drawable.balloon)
-            r.status == 0 -> PendingSelfReportBox(onStartVerify)
-        }
     }
 }
 
-@Composable
-private fun RoundedThumb(res: Int) {
-    androidx.compose.foundation.Image(
-        painterResource(res),
-        contentDescription = null,
-        modifier = Modifier
-            .size(width = 62.dp, height = 58.dp)
-            .clip(RoundedCornerShape(6.dp)),
-        contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-    )
-}
-
-/** Dashed "+ Self Report" box on pending rows (p03/p68). */
+/** Dashed "+ Log an action" box (p03/p68 look). */
 @Composable
 fun PendingSelfReportBox(onTap: () -> Unit) {
     Box(
         Modifier
             .noRippleClickable { onTap() }
-            .size(width = 78.dp, height = 72.dp)
+            .size(width = 110.dp, height = 58.dp)
             .background(Mint, RoundedCornerShape(10.dp))
             .dashedBorder(1.5.dp, Teal, 10.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("+", color = Teal, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-            Text("Self Report", color = Teal, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("+", color = Teal, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.width(5.dp))
+            Text("Log an action", color = Teal, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
         }
     }
 }
 
 /** Dashed stroke modifier (PDF capture area + self-report box). */
-fun Modifier.dashedBorder(strokeWidth: Dp, color: Color, cornerRadius: Dp): Modifier =
+fun Modifier.dashedBorder(strokeWidth: androidx.compose.ui.unit.Dp, color: Color, cornerRadius: androidx.compose.ui.unit.Dp): Modifier =
     this.drawBehind {
         val stroke = strokeWidth.toPx()
         val radius = cornerRadius.toPx()
         val path = Path().apply {
-            addRoundRect(RoundRect(rect = Rect(0f, 0f, size.width, size.height), cornerRadius = CornerRadius(radius, radius)))
+            addRoundRect(
+                androidx.compose.ui.geometry.RoundRect(
+                    rect = androidx.compose.ui.geometry.Rect(0f, 0f, size.width, size.height),
+                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(radius, radius),
+                )
+            )
         }
         drawPath(
             path, color,
-            style = DsStroke(width = stroke, pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 8f))),
+            style = Stroke(
+                width = stroke,
+                pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 8f)),
+            ),
         )
     }
 
-/** Upcoming event card (white r16, emoji, going count, register state). */
+/** Upcoming event card (real events, register state). */
 @Composable
-fun EventCard(ev: Event, onClick: () -> Unit) {
-    var registered by remember { mutableStateOf(ev.registered) }
+fun EventCard(ev: CloudEvent, onClick: () -> Unit) {
+    var registered by remember { mutableStateOf(false) }
     Column(
         Modifier
             .width(158.dp)
@@ -433,13 +463,13 @@ fun EventCard(ev: Event, onClick: () -> Unit) {
             .padding(12.dp),
     ) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(ev.emoji, fontSize = 22.sp)
+            Text(ev.emoji?.ifBlank { "🌍" } ?: "🌍", fontSize = 22.sp)
             Text("${ev.going} going", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = Secondary)
         }
         Spacer(Modifier.height(8.dp))
-        Text(ev.name, style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Bold), color = Ink, maxLines = 1)
+        Text(ev.title, style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Bold), color = Ink, maxLines = 1)
         Spacer(Modifier.height(3.dp))
-        Text(ev.date, fontSize = 10.sp, color = Secondary)
+        Text(ev.date ?: "", fontSize = 10.sp, color = Secondary)
         Spacer(Modifier.height(2.dp))
         Text("📍 ${ev.place}", fontSize = 10.sp, color = Secondary, maxLines = 1)
         Spacer(Modifier.height(10.dp))
@@ -448,7 +478,7 @@ fun EventCard(ev: Event, onClick: () -> Unit) {
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(14.dp))
                 .background(if (registered) Mint else Teal)
-                .noRippleClickable { registered = !registered }
+                .noRippleClickable { registered = true }
                 .padding(vertical = 8.dp),
             contentAlignment = Alignment.Center,
         ) {

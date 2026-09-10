@@ -43,14 +43,14 @@ import com.yft.rippleup.ui.theme.Teal
 import kotlinx.coroutines.launch
 
 /**
- * Desktop QR flow: phones scan the physical QR (with GPS geofence); on desktop
- * there is no camera/GPS, so pick the partner location you are at — the verification
- * still lands in the admin review queue, flagged as desktop-origin.
+ * Desktop QR flow: phones scan the physical QR with GPS geofence; on desktop
+ * pick the partner location you are visiting - the verification still goes
+ * through the server pipeline and lands flagged in the admin review queue.
  */
 @Composable
 fun QrScanScreen(
     vm: com.yft.rippleup.ui.AppViewModel,
-    onVerified: (com.yft.rippleup.data.remote.CloudVerification?) -> Unit,
+    onVerified: (Long) -> Unit,
     onError: (String) -> Unit,
     onClose: () -> Unit,
 ) {
@@ -87,13 +87,13 @@ fun QrScanScreen(
         }
         Spacer(Modifier.height(16.dp))
         Text(
-            "Desktop verification — choose the partner location you are visiting.",
+            "Desktop verification - choose the partner location you are visiting.",
             style = TextStyle(fontSize = 13.sp, lineHeight = 19.sp), color = Secondary,
         )
         Spacer(Modifier.height(14.dp))
 
         if (loading) {
-            Text("Loading partner locations…", color = Secondary, fontSize = 14.sp)
+            Text("Loading partner locations...", color = Secondary, fontSize = 14.sp)
         } else if (locations.isEmpty()) {
             Text(
                 "No partner locations found. Make sure the Supabase URL is configured and schema.sql was run.",
@@ -107,11 +107,11 @@ fun QrScanScreen(
                         .fillMaxWidth()
                         .padding(vertical = 5.dp)
                         .clip(RoundedCornerShape(14.dp))
-                        .background(if (isSel) Mint else androidx.compose.ui.graphics.Color.White)
+                        .background(if (isSel) Mint else Color.White)
                         .noRippleClickable { selected = loc }
                         .padding(12.dp),
                 ) {
-                    Text("${loc.emoji ?: "P"}  ${loc.name}", style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Bold), color = Ink)
+                    Text("${loc.emoji?.ifBlank { "P" } ?: "P"}  ${loc.name}", style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Bold), color = Ink)
                     Text(loc.address ?: "", color = Secondary, fontSize = 12.sp)
                     MiniMap(lat = loc.lat, lng = loc.lng, modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
                 }
@@ -124,9 +124,15 @@ fun QrScanScreen(
                     .background(if (selected != null) Teal else Color(0xFFB7D6D0))
                     .noRippleClickable(enabled = selected != null) {
                         scope.launch {
-                            message = "Submitting verification…"
-                            val (ver, err) = vm.recordDesktopVerification(selected!!)
-                            if (ver != null) onVerified(ver) else {
+                            message = "Submitting verification..."
+                            val (verId, err) = vm.submitQrScan(
+                                location = selected!!,
+                                userLat = selected!!.lat,
+                                userLng = selected!!.lng,
+                                accuracyM = null,
+                                device = "Desktop",
+                            )
+                            if (verId != null) onVerified(verId) else {
                                 message = err ?: "Verification failed."
                                 onError(message)
                             }
@@ -135,7 +141,7 @@ fun QrScanScreen(
                     .padding(vertical = 14.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                Text("Verify me at this location", color = androidx.compose.ui.graphics.Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                Text("Verify me at this location", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
             }
             if (message.isNotBlank()) {
                 Spacer(Modifier.height(8.dp))

@@ -66,7 +66,7 @@ import java.util.concurrent.Executors
 @Composable
 fun QrScanScreen(
     vm: com.yft.rippleup.ui.AppViewModel,
-    onVerified: (com.yft.rippleup.data.remote.CloudVerification?) -> Unit,
+    onVerified: (Long) -> Unit,
     onError: (String) -> Unit,
     onClose: () -> Unit,
 ) {
@@ -168,21 +168,14 @@ fun QrScanScreen(
                                                         } else {
                                                             status = "Getting your GPS position and address…"
                                                             val fix = GeoHelper.fullFix(context)
-                                                            val (ver, err) = vm.recordQrVerification(
+                                                            val (verId, err) = vm.submitQrScan(
                                                                 location = location,
                                                                 userLat = fix.lat,
                                                                 userLng = fix.lng,
-                                                                userAddress = fix.address,
-                                                                accuracyM = fix.accuracyM,
+                                                                accuracyM = fix.accuracyM?.toDouble(),
                                                                 device = "${Build.MANUFACTURER} ${Build.MODEL}".trim(),
-                                                                title = "Partner action @ ${location.name}",
-                                                                subtitle = "QR-verified at ${location.name}",
-                                                                points = 500,
-                                                                actionKey = "refill",
-                                                                co2eGrams = 1200,
                                                             )
-                                                            if (ver != null) onVerified(ver)
-                                                            else {
+                                                            if (verId == null) {
                                                                 detected = false; processing = false
                                                                 status = err ?: "Verification failed — try again"
                                                             }

@@ -25,8 +25,23 @@ data class CloudProfile(
     val email: String? = null,
     val full_name: String? = null,
     val is_admin: Boolean = false,
+    val approval_status: String = "pending",
     val total_points: Int = 0,
     val co2e_grams: Int = 0,
+    val streak_days: Int = 0,
+    val device_id: String? = null,
+)
+
+@Serializable
+data class CloudEvent(
+    val key: String,
+    val emoji: String? = null,
+    val title: String,
+    val date: String? = null,
+    val place: String? = null,
+    val going: Int = 0,
+    val points: Int = 500,
+    val active: Boolean = true,
 )
 
 @Serializable

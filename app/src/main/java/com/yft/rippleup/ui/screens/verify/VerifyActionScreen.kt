@@ -251,8 +251,10 @@ fun VerifyActionScreen(
                     rejectMsg = rejection
                     submitting = false
                 } else {
-                    vm.commitVerified(pending)
-                    onVerified()
+                    vm.commitSelfReported(pending) { ok, msg ->
+                        submitting = false
+                        if (ok) onVerified() else rejectMsg = msg
+                    }
                 }
             }
         }

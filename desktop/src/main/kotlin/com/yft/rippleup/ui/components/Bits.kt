@@ -12,7 +12,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import org.jetbrains.compose.resources.painterResource
 import androidx.compose.ui.text.TextStyle
@@ -21,12 +20,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.yft.rippleup.resources.Res
-import com.yft.rippleup.resources.drop
 import com.yft.rippleup.resources.logo
-import com.yft.rippleup.ui.theme.OrangeLight
-import com.yft.rippleup.ui.theme.Teal
-import com.yft.rippleup.ui.theme.White
-import org.jetbrains.compose.resources.painterResource
+import com.yft.rippleup.resources.drop
+import com.yft.rippleup.ui.theme.*
 
 @Composable
 fun RippleLogo(size: Dp = 40.dp, useEmblem: Boolean = false) {
@@ -49,10 +45,7 @@ fun GradientButton(
         modifier = modifier
             .noRippleClickable(enabled) { onClick() }
             .clip(RoundedCornerShape(28.dp))
-            .background(
-                if (enabled) Brush.horizontalGradient(listOf(Color(0xFF14B8A6), Teal))
-                else Brush.horizontalGradient(listOf(com.yft.rippleup.ui.theme.MintInput, com.yft.rippleup.ui.theme.MintInput))
-            )
+            .background(if (enabled) androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(Color(0xFF14B8A6), Teal)) else androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(MintInput, MintInput)))
             .padding(vertical = 15.dp),
         contentAlignment = Alignment.Center,
     ) {
@@ -64,10 +57,10 @@ fun GradientButton(
     }
 }
 
-/** Circle icon button on mint (back, close, bell). Content lambda is the last param. */
+/** Circle icon button on mint (back, close, bell). */
 @Composable
 fun CircleIconButton(
-    bg: Color = com.yft.rippleup.ui.theme.Mint,
+    bg: Color = Mint,
     size: Dp = 36.dp,
     badge: Boolean = false,
     onClick: () -> Unit = {},
@@ -111,3 +104,4 @@ fun PillTag(text: String, bg: Color, fg: Color, bold: Boolean = false) {
         )
     }
 }
+

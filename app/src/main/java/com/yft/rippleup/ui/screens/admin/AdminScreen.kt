@@ -29,6 +29,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.yft.rippleup.data.remote.CloudProfile
 import com.yft.rippleup.data.remote.VerificationReceipt
 import com.yft.rippleup.ui.components.noRippleClickable
 import com.yft.rippleup.ui.screens.verify.VerificationReceiptScreen
@@ -46,6 +47,8 @@ fun AdminScreen(vm: com.yft.rippleup.ui.AppViewModel, onBack: () -> Unit) {
     val cloud = vm.cloud
     val scope = rememberCoroutineScope()
     var receipts by remember { mutableStateOf<List<VerificationReceipt>>(emptyList()) }
+    var users by remember { mutableStateOf<List<CloudProfile>>(emptyList()) }
+    var tab by remember { mutableStateOf(0) }   // 0 verifications, 1 users
     var loading by remember { mutableStateOf(true) }
     var open by remember { mutableStateOf<VerificationReceipt?>(null) }
     var message by remember { mutableStateOf("") }
@@ -54,6 +57,7 @@ fun AdminScreen(vm: com.yft.rippleup.ui.AppViewModel, onBack: () -> Unit) {
         scope.launch {
             loading = true
             receipts = cloud.fetchAllVerifications()
+            users = cloud.fetchPendingProfiles()
             loading = false
         }
     }
@@ -89,11 +93,88 @@ fun AdminScreen(vm: com.yft.rippleup.ui.AppViewModel, onBack: () -> Unit) {
             Text(message, color = DangerRed, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
         }
         Spacer(Modifier.height(12.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            listOf("Verifications", "New users").forEachIndexed { i, label ->
+                val active = tab == i
+                Box(
+                    Modifier
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(if (active) Teal else Color(0xFFE9E9E9))
+                        .noRippleClickable { tab = i }
+                        .padding(horizontal = 14.dp, vertical = 8.dp)
+                ) { Text(label, color = if (active) Color.White else Secondary, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
+            }
+        }
+        Spacer(Modifier.height(12.dp))
 
         if (loading) {
             Text("Loading verifications…", color = Secondary, fontSize = 14.sp)
             return@Column
         }
+        if (tab == 1) {
+            val pendingUsers = users.sortedBy { if (it.approval_status == "rejected") 1 else 0 }
+            if (pendingUsers.isEmpty()) {
+                Text("No accounts awaiting verification.", color = Secondary, fontSize = 14.sp)
+            } else LazyColumn {
+                items(pendingUsers, key = { it.id }) { u ->
+                    var busyU by remember(u.id) { mutableStateOf(false) }
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 5.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(Color.White)
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text(u.full_name ?: "Member", style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Bold), color = Ink)
+                            Text(u.email ?: "", color = Secondary, fontSize = 11.sp)
+                            Text(
+                                when (u.approval_status) {
+                                    "pending" -> "Awaiting verification"
+                                    "rejected" -> "Rejected"
+                                    else -> u.approval_status
+                                },
+                                color = Orange, fontSize = 11.sp,
+                            )
+                        }
+                        Box(
+                            Modifier
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(Teal)
+                                .noRippleClickable(enabled = !busyU) {
+                                    busyU = true
+                                    scope.launch {
+                                        vm.setUserApproval(u.id, "approved")
+                                        users = users.filterNot { it.id == u.id }
+                                        busyU = false
+                                    }
+                                }
+                                .padding(horizontal = 12.dp, vertical = 7.dp)
+                        ) { Text("Approve", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold) }
+                        Spacer(Modifier.width(6.dp))
+                        Box(
+                            Modifier
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(Color(0xFFFDE8E8))
+                                .noRippleClickable(enabled = !busyU) {
+                                    busyU = true
+                                    scope.launch {
+                                        vm.setUserApproval(u.id, "rejected")
+                                        users = users.filterNot { it.id == u.id }
+                                        busyU = false
+                                    }
+                                }
+                                .padding(horizontal = 12.dp, vertical = 7.dp)
+                        ) { Text("Reject", color = DangerRed, fontSize = 11.sp, fontWeight = FontWeight.Bold) }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                }
+            }
+            return@Column
+        }
+
         if (receipts.isEmpty()) {
             Text("No verifications yet. Scan a partner QR to create one.", color = Secondary, fontSize = 14.sp)
             return@Column

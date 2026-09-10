@@ -55,7 +55,7 @@ The app now has a full cloud backend: user accounts, sync, QR verification with
 location proof (who + where + map), admin review, badges, notifications, events.
 
 1. **Create the database** — Supabase Dashboard → SQL Editor → paste
-   `supabase/schema.sql` → Run. (Creates profiles, ripples, partner_locations,
+   `supabase/schema.sql, then supabase/migration_v2_security.sql` → Run. (Creates profiles, ripples, partner_locations,
    verifications, badges, notifications, event_registrations, RLS, and the
    approve/reject/badge pipelines.)
 2. **Connect the app** — Supabase Dashboard → Settings → API → copy the Project URL →

@@ -16,8 +16,8 @@ android {
         applicationId = "com.yft.rippleup"
         minSdk = 24
         targetSdk = 34
-        versionCode = 20
-        versionName = "5.0.0"
+        versionCode = 21
+        versionName = "5.2.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

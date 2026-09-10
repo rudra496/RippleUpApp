@@ -41,7 +41,7 @@ import com.yft.rippleup.data.Content
 import com.yft.rippleup.ui.components.PillTag
 import com.yft.rippleup.ui.components.RippleLogo
 import com.yft.rippleup.ui.components.noRippleClickable
-import com.yft.rippleup.ui.screens.onboarding.RewardTabs
+import com.yft.rippleup.ui.components.RewardTabs
 import com.yft.rippleup.ui.theme.*
 
 /** p08/p39 — Rewards + Badges tabs. */

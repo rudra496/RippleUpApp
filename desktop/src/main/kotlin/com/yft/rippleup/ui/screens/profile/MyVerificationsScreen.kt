@@ -68,6 +68,7 @@ fun MyVerificationsScreen(vm: com.yft.rippleup.ui.AppViewModel, onBack: () -> Un
                         time = r.created_at?.take(16)?.replace('T', ' ') ?: "",
                         status = r.status,
                         distance = r.distance_m,
+                        address = r.user_address,
                         onClick = { open = r },
                     )
                 }

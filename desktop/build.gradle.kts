@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "com.yft.rippleup"
-version = "5.0.0"
+version = "5.2.0"
 
 repositories {
     mavenCentral()

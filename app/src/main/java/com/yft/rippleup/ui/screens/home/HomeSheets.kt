@@ -21,6 +21,7 @@ import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -35,15 +36,17 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.yft.rippleup.data.Content
-import com.yft.rippleup.data.db.RippleEntity
+import com.yft.rippleup.data.remote.CloudRipple
+import com.yft.rippleup.data.remote.CloudNotification
 import com.yft.rippleup.ui.AppViewModel
 import com.yft.rippleup.ui.components.PillTag
 import com.yft.rippleup.ui.components.noRippleClickable
 import com.yft.rippleup.ui.theme.*
+import kotlinx.coroutines.launch
 
 /** Shared sheet chrome: drag handle + title row with X. */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -90,20 +93,14 @@ fun CloseX(onClose: () -> Unit) {
             .noRippleClickable { onClose() },
         contentAlignment = Alignment.Center,
     ) {
-        androidx.compose.material3.Icon(
-            androidx.compose.material.icons.Icons.Outlined.Close,
-            contentDescription = "Close",
-            tint = Ink,
-            modifier = Modifier.size(17.dp),
-        )
+        Icon(Icons.Outlined.Close, contentDescription = "Close", tint = Ink, modifier = Modifier.size(17.dp))
     }
 }
 
 /** p15/p33 — Edit Today's Ripples List (strike-through remove, + add, Discover more). */
 @Composable
-fun EditListSheet(vm: AppViewModel, ripples: List<RippleEntity>, onClose: () -> Unit) {
+fun EditListSheet(vm: AppViewModel, ripples: List<CloudRipple>, onClose: () -> Unit) {
     val removedIds = remember { mutableStateListOf<Long>() }
-    var saved by remember { mutableStateOf(false) }
 
     SheetScaffold(
         title = "Edit Today's Ripples List",
@@ -115,7 +112,6 @@ fun EditListSheet(vm: AppViewModel, ripples: List<RippleEntity>, onClose: () -> 
                         .background(Teal)
                         .noRippleClickable {
                             removedIds.forEach { vm.removeRipple(it) }
-                            saved = true
                             onClose()
                         }
                         .padding(horizontal = 14.dp, vertical = 8.dp)
@@ -167,7 +163,7 @@ fun EditListSheet(vm: AppViewModel, ripples: List<RippleEntity>, onClose: () -> 
                                 textDecoration = if (removed) TextDecoration.LineThrough else null,
                             )
                             Text(
-                                r.subtitle,
+                                r.subtitle ?: "",
                                 style = TextStyle(fontSize = 12.sp),
                                 color = if (removed) Color(0xFFB6C2BF) else Teal,
                             )
@@ -182,9 +178,8 @@ fun EditListSheet(vm: AppViewModel, ripples: List<RippleEntity>, onClose: () -> 
                                 },
                             contentAlignment = Alignment.Center,
                         ) {
-                            androidx.compose.material3.Icon(
-                                if (removed) androidx.compose.material.icons.Icons.Outlined.Refresh
-                                else androidx.compose.material.icons.Icons.Outlined.Delete,
+                            Icon(
+                                if (removed) Icons.Outlined.Refresh else Icons.Outlined.Delete,
                                 contentDescription = if (removed) "Restore" else "Remove",
                                 tint = if (removed) Teal else DangerRed,
                                 modifier = Modifier.size(17.dp),
@@ -195,7 +190,6 @@ fun EditListSheet(vm: AppViewModel, ripples: List<RippleEntity>, onClose: () -> 
                 }
 
                 Spacer(Modifier.height(10.dp))
-                // Add Action dashed container
                 Column(
                     Modifier
                         .fillMaxWidth()
@@ -209,10 +203,10 @@ fun EditListSheet(vm: AppViewModel, ripples: List<RippleEntity>, onClose: () -> 
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.fillMaxWidth(),
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        textAlign = TextAlign.Center,
                     )
                     Spacer(Modifier.height(10.dp))
-                    Content.addableActions.forEach { (emoji, title, pts) ->
+                    com.yft.rippleup.data.Content.addableActions.forEach { (emoji, title, pts) ->
                         val inList = ripples.any { it.title == title }
                         Row(
                             Modifier
@@ -245,7 +239,9 @@ fun EditListSheet(vm: AppViewModel, ripples: List<RippleEntity>, onClose: () -> 
                                         val sub = if (title.contains("Compost")) "Make your food scraps count" else "Skip single-use cups"
                                         val key = if (title.contains("Compost")) "compost" else "refill"
                                         val kg = if (title.contains("Compost")) 0.3f else 0.05f
-                                        vm.addPending(title, sub, pts.removePrefix("+").toInt(), key, kg)
+                                        vm.commitSelfReported(
+                                            com.yft.rippleup.ui.PendingVerify(title, sub, pts.removePrefix("+").toInt(), key, kg, viaQr = false)
+                                        ) { _, _ -> }
                                     },
                                 contentAlignment = Alignment.Center,
                             ) { Text(if (inList) "✓" else "+", color = if (inList) Teal else Color.White, fontWeight = FontWeight.Bold) }
@@ -269,17 +265,25 @@ fun EditListSheet(vm: AppViewModel, ripples: List<RippleEntity>, onClose: () -> 
     }
 }
 
-private fun emojiFor(r: RippleEntity): String = when (r.art) {
-    "veg" -> "🥬"
-    "balloon" -> "👕"
-    else -> if (r.title.contains("meal", true) || r.title.contains("food", true)) "🍱" else "🌿"
+private fun emojiFor(r: CloudRipple): String = when {
+    r.title.contains("meal", true) || r.title.contains("food", true) -> "🍱"
+    r.title.contains("recycl", true) -> "♻️"
+    r.title.contains("cloth", true) -> "👕"
+    else -> "🌿"
 }
 
-/** p34 — Notifications sheet with colored cards. */
+/** p34 — Notifications sheet backed by real cloud notifications. */
 @Composable
-fun NotificationsSheet(onClose: () -> Unit, onLogAction: () -> Unit) {
-    val items = remember { mutableStateListOf<com.yft.rippleup.data.Notif>(*Content.notifications.toTypedArray()) }
+fun NotificationsSheet(vm: AppViewModel, onClose: () -> Unit, onLogAction: () -> Unit) {
+    val items = remember { mutableStateListOf<CloudNotification>() }
+    var loading by remember { mutableStateOf(true) }
     var cleared by remember { mutableStateOf(false) }
+
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        items.addAll(vm.cloud.fetchNotifications())
+        loading = false
+    }
+
     SheetScaffold(
         title = "Notifications",
         trailing = {
@@ -298,7 +302,11 @@ fun NotificationsSheet(onClose: () -> Unit, onLogAction: () -> Unit) {
     ) {
         Column(Modifier.padding(horizontal = 20.dp)) {
             Text(
-                if (cleared || items.isEmpty()) "You're all caught up 🎉" else "${items.size} unread",
+                when {
+                    loading -> "Loading…"
+                    cleared || items.isEmpty() -> "You're all caught up 🎉"
+                    else -> "${items.size} unread"
+                },
                 color = Secondary,
                 fontSize = 14.sp,
             )
@@ -310,8 +318,12 @@ fun NotificationsSheet(onClose: () -> Unit, onLogAction: () -> Unit) {
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 items.toList().forEach { n ->
-                    val bg = when (n.bgTone) {
-                        0 -> NotifOrange; 1 -> NotifMint; 2 -> NotifLavender; 3 -> NotifGreen; else -> NotifCream
+                    val bg = when (n.tone) {
+                        "orange" -> NotifOrange
+                        "cream" -> NotifCream
+                        "lavender" -> NotifLavender
+                        "green" -> NotifGreen
+                        else -> NotifMint
                     }
                     Column(
                         Modifier
@@ -321,8 +333,8 @@ fun NotificationsSheet(onClose: () -> Unit, onLogAction: () -> Unit) {
                             .padding(16.dp)
                     ) {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(n.emoji, fontSize = 20.sp)
+                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                                Text("🔔", fontSize = 18.sp)
                                 Spacer(Modifier.width(10.dp))
                                 Text(n.title, style = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.Bold), color = Ink)
                             }
@@ -332,24 +344,9 @@ fun NotificationsSheet(onClose: () -> Unit, onLogAction: () -> Unit) {
                             )
                         }
                         Spacer(Modifier.height(8.dp))
-                        Text(n.body, style = TextStyle(fontSize = 14.sp, lineHeight = 21.sp), color = Color(0xFF334441))
+                        Text(n.body ?: "", style = TextStyle(fontSize = 14.sp, lineHeight = 21.sp), color = Color(0xFF334441))
                         Spacer(Modifier.height(10.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            if (n.button.isNotEmpty()) {
-                                Box(
-                                    Modifier
-                                        .clip(RoundedCornerShape(15.dp))
-                                        .background(if (n.buttonOrange) Orange else Teal)
-                                        .noRippleClickable {
-                                            if (n.button == "Log an action") { onClose(); onLogAction() }
-                                        }
-                                        .padding(horizontal = 14.dp, vertical = 8.dp)
-                                ) {
-                                    Text(n.button, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                }
-                            }
-                            if (n.time.isNotEmpty()) Text(n.time, color = Secondary, fontSize = 12.sp)
-                        }
+                        Text(n.created_at?.take(16)?.replace('T', ' ') ?: "", color = Secondary, fontSize = 12.sp)
                     }
                 }
             }
@@ -359,9 +356,11 @@ fun NotificationsSheet(onClose: () -> Unit, onLogAction: () -> Unit) {
 
 /** p31/32 — Event detail bottom sheet with Register → Registered state. */
 @Composable
-fun EventDetailSheet(onClose: () -> Unit) {
+fun EventDetailSheet(vm: AppViewModel, onClose: () -> Unit) {
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
     var registered by remember { mutableStateOf(false) }
-    val ev = Content.eventDetail
+    val ev = vm.events.value.firstOrNull()
+
     SheetScaffold(title = "", trailing = {}, onClose = onClose) {
         Column(
             Modifier
@@ -369,6 +368,10 @@ fun EventDetailSheet(onClose: () -> Unit) {
                 .verticalScroll(rememberScrollState())
                 .padding(bottom = 30.dp),
         ) {
+            if (ev == null) {
+                Text("No upcoming events right now — follow RippleUp for announcements!", color = Secondary, fontSize = 14.sp)
+                return@Column
+            }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
                 Box(
                     Modifier
@@ -376,11 +379,11 @@ fun EventDetailSheet(onClose: () -> Unit) {
                         .clip(CircleShape)
                         .background(Color(0xFFEAF3F8)),
                     contentAlignment = Alignment.Center,
-                ) { Text(ev.emoji, fontSize = 30.sp) }
+                ) { Text(ev.emoji?.ifBlank { "🌍" } ?: "🌍", fontSize = 28.sp) }
                 CloseX(onClose)
             }
             Spacer(Modifier.height(14.dp))
-            Text(ev.name, style = TextStyle(fontSize = 24.sp, fontWeight = FontWeight.Bold), color = Ink)
+            Text(ev.title, style = TextStyle(fontSize = 24.sp, fontWeight = FontWeight.Bold), color = Ink)
             Spacer(Modifier.height(10.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Box(
@@ -388,7 +391,7 @@ fun EventDetailSheet(onClose: () -> Unit) {
                         .clip(RoundedCornerShape(9.dp))
                         .background(Mint)
                         .padding(horizontal = 10.dp, vertical = 4.dp)
-                ) { Text("+500 pts", color = Teal, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
+                ) { Text("+${ev.points} pts", color = Teal, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
                 Box(
                     Modifier
                         .clip(RoundedCornerShape(9.dp))
@@ -406,9 +409,8 @@ fun EventDetailSheet(onClose: () -> Unit) {
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
-                DetailRow("📅", "Sat, Jun 22")
-                DetailRow("🕗", "8:00 AM")
-                DetailRow("📍", "Narendra Park")
+                DetailRow("📅", ev.date ?: "Date to be announced")
+                DetailRow("📍", ev.place ?: "To be announced")
                 DetailRow("👥", "${ev.going} going")
             }
             Spacer(Modifier.height(16.dp))
@@ -421,7 +423,11 @@ fun EventDetailSheet(onClose: () -> Unit) {
             ) {
                 Text("HOW TO PARTICIPATE", color = Teal, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
                 Spacer(Modifier.height(12.dp))
-                Content.eventDetailSteps.forEachIndexed { i, step ->
+                listOf(
+                    "Register your spot below",
+                    "Show up on the day, participate & scan the Ripple QR!",
+                    "Earn your points and badge instantly",
+                ).forEachIndexed { i, step ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(
                             Modifier
@@ -439,7 +445,7 @@ fun EventDetailSheet(onClose: () -> Unit) {
             Spacer(Modifier.height(16.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 StatCard("${ev.going}", "Going", Modifier.weight(1f))
-                StatCard("+500", "Ripple Points", Modifier.weight(1f), valueTeal = true)
+                StatCard("+${ev.points}", "Ripple Points", Modifier.weight(1f), valueTeal = true)
             }
             Spacer(Modifier.height(18.dp))
             if (!registered) {
@@ -448,7 +454,10 @@ fun EventDetailSheet(onClose: () -> Unit) {
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(28.dp))
                         .background(Teal)
-                        .noRippleClickable { registered = true }
+                        .noRippleClickable {
+                            registered = true
+                            scope.launch { vm.registerForEvent(ev.key) }
+                        }
                         .padding(vertical = 15.dp),
                     contentAlignment = Alignment.Center,
                 ) { Text("Register Now", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold) }
@@ -527,7 +536,7 @@ fun VerifyChoiceDialog(
                     style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Bold, lineHeight = 20.sp),
                     color = Ink,
                     modifier = Modifier.align(Alignment.Center),
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    textAlign = TextAlign.Center,
                 )
                 Box(
                     Modifier
@@ -549,7 +558,7 @@ fun VerifyChoiceDialog(
                 "scan Ripple QR at partner location or events to earn more points + verified badge",
                 style = TextStyle(fontSize = 9.sp, lineHeight = 13.sp),
                 color = HintGray,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                textAlign = TextAlign.Center,
             )
             Spacer(Modifier.height(4.dp))
         }

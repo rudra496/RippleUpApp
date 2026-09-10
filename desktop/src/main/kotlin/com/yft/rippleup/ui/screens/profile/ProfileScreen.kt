@@ -23,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material.icons.outlined.FactCheck
 import androidx.compose.material.icons.outlined.Logout
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Verified
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Notifications
@@ -54,7 +55,6 @@ import com.yft.rippleup.resources.cal15
 import com.yft.rippleup.resources.cal14
 import com.yft.rippleup.resources.cal13
 import com.yft.rippleup.resources.avatar
-import org.jetbrains.compose.resources.painterResource
 import com.yft.rippleup.ui.AppViewModel
 import com.yft.rippleup.ui.components.CircleIconButton
 import com.yft.rippleup.ui.components.RippleLogo
@@ -65,10 +65,10 @@ import com.yft.rippleup.ui.theme.*
 @Composable
 fun ProfileScreen(
     vm: AppViewModel,
-    onOpenAbout: () -> Unit = {},
-    onOpenNotifSettings: () -> Unit = {},
-    onOpenHelp: () -> Unit = {},
-    onOpenPrivacy: () -> Unit = {},
+    onOpenAbout: () -> Unit,
+    onOpenNotifSettings: () -> Unit,
+    onOpenHelp: () -> Unit,
+    onOpenPrivacy: () -> Unit,
     onOpenAdmin: () -> Unit = {},
     onOpenMyVerifications: () -> Unit = {},
 ) {
@@ -127,7 +127,7 @@ fun ProfileScreen(
                         .clip(CircleShape)
                         .background(OrangeLight),
                     contentAlignment = Alignment.Center,
-                ) { Text("✎", fontSize = 13.sp, color = Color.White) }
+                ) { Icon(Icons.Outlined.Edit, contentDescription = "Edit photo", tint = Color.White, modifier = Modifier.size(14.dp)) }
             }
             Spacer(Modifier.height(12.dp))
             Text(vm.displayName, style = TextStyle(fontSize = 20.sp, fontWeight = FontWeight.Bold), color = Ink)
@@ -153,7 +153,6 @@ fun ProfileScreen(
             Spacer(Modifier.height(10.dp))
             SettingRow(icon = { androidx.compose.foundation.Image(painterResource(Res.drawable.drop), contentDescription = null, modifier = Modifier.size(18.dp)) }, label = "About Ripple Up") { showAbout = true }
             SettingRow(icon = { Icon(Icons.Outlined.Notifications, null, tint = Teal, modifier = Modifier.size(18.dp)) }, label = "Notifications") { showNotif = true }
-            SettingRow(icon = { Text("🎧", fontSize = 14.sp) }, label = "Help & Support") { showHelp = true }
             SettingRow(icon = { Icon(Icons.Outlined.Lock, null, tint = Teal, modifier = Modifier.size(18.dp)) }, label = "Privacy and Data") { showPrivacy = true }
             if (session?.isAdmin == true) {
                 SettingRow(icon = { Icon(Icons.Outlined.FactCheck, null, tint = Teal, modifier = Modifier.size(18.dp)) }, label = "Admin Review") { onOpenAdmin() }

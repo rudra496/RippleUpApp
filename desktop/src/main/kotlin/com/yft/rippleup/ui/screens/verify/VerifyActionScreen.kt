@@ -227,8 +227,10 @@ fun VerifyActionScreen(
                     rejectMsg = rejection
                     submitting = false
                 } else {
-                    vm.commitVerified(pending)
-                    onVerified()
+                    vm.commitSelfReported(pending) { ok, msg ->
+                        submitting = false
+                        if (ok) onVerified() else rejectMsg = msg
+                    }
                 }
             }
         }
@@ -380,6 +382,18 @@ fun VerifiedScreen(
             Spacer(Modifier.height(14.dp))
             Text(
                 "View verification receipt ->",
+                color = Teal,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier
+                    .noRippleClickable { onViewReceipt() }
+                    .padding(6.dp),
+            )
+        }
+        if (showReceiptButton) {
+            Spacer(Modifier.height(14.dp))
+            Text(
+                "View verification receipt →",
                 color = Teal,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
