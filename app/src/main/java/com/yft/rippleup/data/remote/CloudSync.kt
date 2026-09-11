@@ -68,11 +68,17 @@ class CloudSync(private val sessions: SessionManager) {
 
     suspend fun currentUserId(): String? = runCatching {
         val res = SupaClient.authGet("user", sessions.accessToken)
-        if (res.ok) res.parse<AuthResponse>()?.user?.id else null
-    }.getOrNull()
+        android.util.Log.d("RippleUpDebug", "currentUserId code=" + res.code + " body=" + (res.body ?: "").take(150))
+        if (res.ok) res.parse<com.yft.rippleup.data.remote.CloudUser>()?.id else null
+    }.onFailure { android.util.Log.d("RippleUpDebug", "currentUserId EX: ${it.message}") }.getOrNull()
 
     suspend fun fetchProfile(): CloudProfile? =
-        runCatching { get("id=eq.${currentUserId()}", "profiles", CloudProfile.serializer()) }.getOrNull()
+        runCatching {
+            val res = SupaClient.rest("GET", "profiles", "id=eq.${currentUserId()}", token = token())
+            android.util.Log.d("RippleUpDebug", "fetchProfile code=" + res.code + " body=" + (res.body ?: "").take(150))
+            if (res.ok) listJson.decodeFromString(ListSerializer(CloudProfile.serializer()), res.body ?: "[]").firstOrNull() else null
+        }.onFailure { android.util.Log.d("RippleUpDebug", "fetchProfile EX: ${it.message}") }
+        .getOrNull()
 
     fun signOut() = sessions.clear()
 
