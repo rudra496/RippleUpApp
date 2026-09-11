@@ -106,6 +106,40 @@ fun AdminScreen(vm: com.yft.rippleup.ui.AppViewModel, onBack: () -> Unit) {
             }
         }
         Spacer(Modifier.height(12.dp))
+        // promote by email — owner feature
+        var promoteEmail by remember { mutableStateOf("") }
+        var promoteMsg by remember { mutableStateOf("") }
+        Row(
+            Modifier.fillMaxWidth().padding(bottom = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            androidx.compose.material3.OutlinedTextField(
+                value = promoteEmail,
+                onValueChange = { promoteEmail = it },
+                placeholder = { Text("gmail of new admin", fontSize = 12.sp) },
+                modifier = Modifier.weight(1f),
+                singleLine = true,
+            )
+            Box(
+                Modifier
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Orange)
+                    .noRippleClickable {
+                        if (promoteEmail.contains("@")) {
+                            scope.launch {
+                                promoteMsg = vm.cloud.setAdminByEmail(promoteEmail, true)
+                                    ?: ("Admin added: " + promoteEmail.trim())
+                            }
+                        } else promoteMsg = "Enter a valid email"
+                    }
+                    .padding(horizontal = 12.dp, vertical = 10.dp)
+            ) { Text("Make admin", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
+        }
+        if (promoteMsg.isNotBlank()) {
+            Text(promoteMsg, color = Teal, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.height(6.dp))
+        }
 
         if (loading) {
             Text("Loading verifications…", color = Secondary, fontSize = 14.sp)

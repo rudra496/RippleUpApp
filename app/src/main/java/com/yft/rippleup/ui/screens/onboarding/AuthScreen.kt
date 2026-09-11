@@ -69,6 +69,7 @@ fun AuthScreen(vm: com.yft.rippleup.ui.AppViewModel) {
     var code by remember { mutableStateOf("") }
     var show by remember { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
+    var resendBusy by remember { mutableStateOf(false) }
     var err by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -126,7 +127,11 @@ fun AuthScreen(vm: com.yft.rippleup.ui.AppViewModel) {
             MintField(code, { code = it.filter { c -> c.isDigit() }.take(8) }, "12345678", KeyboardType.Number)
             Spacer(Modifier.height(8.dp))
             Text(
-                "Resend code",
+                when {
+                    resendBusy -> "Sending code…"
+                    codeSent -> "Code sent ✓ tap to resend"
+                    else -> "Resend code"
+                },
                 color = Teal,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.SemiBold,

@@ -166,6 +166,18 @@ class CloudSync(private val sessions: SessionManager) {
 
     // ---- ADMIN ----
 
+    suspend fun setAdminByEmail(email: String, admin: Boolean): String? {
+        val res = SupaClient.rpc(
+            "set_admin_by_email",
+            buildJsonObject {
+                put("p_email", email.trim().lowercase())
+                put("p_admin", admin)
+            },
+            token(),
+        )
+        return if (res.ok) null else res.error()
+    }
+
     suspend fun fetchPendingProfiles(): List<CloudProfile> = runCatching {
         val res = SupaClient.rest("GET", "profiles",
             "approval_status=neq.approved&select=*&order=created_at.desc&limit=100",

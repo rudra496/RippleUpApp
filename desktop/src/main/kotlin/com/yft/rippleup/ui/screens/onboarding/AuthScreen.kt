@@ -65,6 +65,8 @@ fun AuthScreen(vm: com.yft.rippleup.ui.AppViewModel) {
     var pass by remember { mutableStateOf("") }
     var show by remember { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
+    var resendBusy by remember { mutableStateOf(false) }
+    var codeSent by remember { mutableStateOf(false) }
     var err by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
 
