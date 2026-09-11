@@ -123,7 +123,7 @@ fun AuthScreen(vm: com.yft.rippleup.ui.AppViewModel) {
         if (mode == 1 && codeLogin) {
             Spacer(Modifier.height(14.dp))
             FieldLabel("6-digit code from your email")
-            MintField(code, { code = it.filter { c -> c.isDigit() }.take(6) }, "123456", KeyboardType.Number)
+            MintField(code, { code = it.filter { c -> c.isDigit() }.take(8) }, "12345678", KeyboardType.Number)
             Spacer(Modifier.height(8.dp))
             Text(
                 "Resend code",
@@ -189,7 +189,7 @@ fun AuthScreen(vm: com.yft.rippleup.ui.AppViewModel) {
         GradientButton(
             label = if (busy) "Please wait…" else "Continue",
             enabled = !busy && email.contains("@") && email.contains(".") &&
-                (if (mode == 1 && codeLogin) code.length == 6 else pass.length >= 6) &&
+                (if (mode == 1 && codeLogin) code.length in 6..8 else pass.length >= 6) &&
                 (mode == 1 || (first.isNotBlank() && last.isNotBlank())),
             modifier = Modifier.fillMaxWidth(),
         ) {

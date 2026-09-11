@@ -14,8 +14,8 @@ package com.yft.rippleup.data.remote
  * The publishable key is SAFE to ship in a client app (that is its purpose).
  */
 object Config {
-    const val SUPABASE_URL = "https://feohjhhnucqgtnykjxmp.supabase.co"
-    const val SUPABASE_PUBLISHABLE_KEY = "sb_publishable_XV7yrMaCtCjKH9UDI0gXug_yNgb8JD5"
+    const val SUPABASE_URL = "https://fwhtkmqdzxbucanjajjp.supabase.co"
+    const val SUPABASE_PUBLISHABLE_KEY = "sb_publishable_xVpp3gFElglEDISgWuCkEw_hK4JBXl_"
 
     /** Google OAuth **Web** client ID (Credential Manager + Supabase Google provider). */
     const val GOOGLE_WEB_CLIENT_ID = ""
