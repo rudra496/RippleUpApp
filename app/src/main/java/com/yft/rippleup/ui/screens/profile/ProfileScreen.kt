@@ -96,29 +96,14 @@ fun ProfileScreen(
                 }
             }
             Spacer(Modifier.height(10.dp))
-            Box {
-                Box(
-                    Modifier
-                        .size(190.dp)
-                        .clip(CircleShape)
-                        .border(6.dp, Color(0xFFEAF6F2), CircleShape)
-                ) {
-                    Image(
-                        painterResource(R.drawable.avatar),
-                        contentDescription = "Profile photo",
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop,
-                    )
-                }
-                Box(
-                    Modifier
-                        .align(Alignment.BottomEnd)
-                        .offset(x = (-6).dp, y = (-10).dp)
-                        .size(30.dp)
-                        .clip(CircleShape)
-                        .background(OrangeLight),
-                    contentAlignment = Alignment.Center,
-                ) { Icon(Icons.Outlined.Edit, contentDescription = "Edit photo", tint = Color.White, modifier = Modifier.size(14.dp)) }
+            Box(
+                Modifier
+                    .size(120.dp)
+                    .clip(CircleShape)
+                    .background(Mint),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(Icons.Outlined.Person, contentDescription = "Profile", tint = Teal, modifier = Modifier.size(56.dp))
             }
             Spacer(Modifier.height(12.dp))
             Text(vm.displayName, style = TextStyle(fontSize = 20.sp, fontWeight = FontWeight.Bold), color = Ink)

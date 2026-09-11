@@ -5,6 +5,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -173,13 +175,12 @@ private fun ActionCard(a: DiscoverAction, done: Boolean = a.done, onAdd: () -> U
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            androidx.compose.foundation.layout.FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
                 Text(a.emoji, fontSize = 18.sp)
-                Spacer(Modifier.width(2.dp))
                 Text(a.title, style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Bold), color = Ink)
-                Spacer(Modifier.width(6.dp))
                 PillTag(a.difficulty, Color(0xFFEFF1F1), Secondary)
-                Spacer(Modifier.width(2.dp))
                 val (bg, fg) = when (a.ptsTone) {
                     0 -> Color(0xFFD8F5A3) to Color(0xFF3A6B00)
                     1 -> GoldChip to Color(0xFF6B4E00)
