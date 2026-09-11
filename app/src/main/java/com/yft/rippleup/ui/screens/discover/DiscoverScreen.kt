@@ -1,6 +1,7 @@
 package com.yft.rippleup.ui.screens.discover
 
 import androidx.compose.foundation.background
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -49,6 +50,7 @@ import com.yft.rippleup.ui.theme.*
 
 /** p05-07 — Discover with self-report / partner-verified / partners chips. */
 @Composable
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 fun DiscoverScreen(
     vm: AppViewModel,
     onOpenNotifications: () -> Unit,
@@ -175,18 +177,20 @@ private fun ActionCard(a: DiscoverAction, done: Boolean = a.done, onAdd: () -> U
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
-            androidx.compose.foundation.layout.FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(a.emoji, fontSize = 18.sp)
+                Spacer(Modifier.width(6.dp))
                 Text(a.title, style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Bold), color = Ink)
+            }
+            Spacer(Modifier.height(4.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 PillTag(a.difficulty, Color(0xFFEFF1F1), Secondary)
                 val (bg, fg) = when (a.ptsTone) {
                     0 -> Color(0xFFD8F5A3) to Color(0xFF3A6B00)
                     1 -> GoldChip to Color(0xFF6B4E00)
                     else -> Color(0xFFE4D5FA) to Color(0xFF5B2E91)
                 }
-                PillTag("+${a.points} pts", bg, fg, bold = true)
+                PillTag("+" + a.points + " pts", bg, fg, bold = true)
             }
             Spacer(Modifier.height(4.dp))
             if (a.partner.isNotEmpty()) {
