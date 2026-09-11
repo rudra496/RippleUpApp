@@ -158,11 +158,15 @@ fun PendingApprovalScreen(vm: com.yft.rippleup.ui.AppViewModel) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Image(
-            painter = painterResource(R.drawable.party),
-            contentDescription = null,
-            modifier = Modifier.height(190.dp),
-        )
+        Box(Modifier.size(170.dp), contentAlignment = Alignment.Center) {
+            Box(Modifier.size(170.dp).clip(CircleShape).background(Color(0xFFE2F2ED)))
+            Box(Modifier.size(130.dp).clip(CircleShape).background(Color(0xFFD2EBE4)))
+            Image(
+                painter = painterResource(R.drawable.drop),
+                contentDescription = null,
+                modifier = Modifier.size(56.dp),
+            )
+        }
         Spacer(Modifier.height(26.dp))
         Text(
             "You're in! One last step",

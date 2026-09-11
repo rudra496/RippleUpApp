@@ -179,28 +179,6 @@ fun AuthScreen(vm: com.yft.rippleup.ui.AppViewModel) {
             }
         }
         Spacer(Modifier.height(12.dp))
-        // Google sign-in (activates when the OAuth client ID is configured)
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(24.dp))
-                .background(Color.White)
-                .border(1.dp, Color(0x1F000000), RoundedCornerShape(24.dp))
-                .noRippleClickable(enabled = false) { }
-                .padding(vertical = 12.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("G", color = Color(0xFF4285F4), fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    if (Config.googleConfigured) "Continue with Google"
-                    else "Continue with Google (setup in progress)",
-                    color = if (Config.googleConfigured) Ink else Color(0xFF9AA6A3),
-                    fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
-                )
-            }
-        }
         Spacer(Modifier.height(14.dp))
         Text(
             "New accounts are reviewed by the RippleUp team before first use.",

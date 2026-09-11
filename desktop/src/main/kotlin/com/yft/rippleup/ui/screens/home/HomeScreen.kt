@@ -229,12 +229,19 @@ fun CalendarStrip(verifiedDays: Set<String> = emptySet()) {
                         ) {
                             Text("✓", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         }
-                    } else {
+                    } else if (state == 2) {
                         androidx.compose.foundation.Image(
                             painterResource(Res.drawable.drop),
                             contentDescription = null,
                             modifier = Modifier.size(20.dp),
-                            colorFilter = ColorFilter.tint(if (state == 2) Teal else GrayPending),
+                            colorFilter = ColorFilter.tint(Teal),
+                        )
+                    } else {
+                        Box(
+                            Modifier
+                                .size(18.dp)
+                                .clip(CircleShape)
+                                .border(2.dp, GrayPending, CircleShape)
                         )
                     }
                 }
