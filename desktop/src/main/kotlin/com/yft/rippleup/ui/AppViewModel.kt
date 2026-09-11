@@ -8,10 +8,11 @@ import com.yft.rippleup.data.remote.CloudSync
 import com.yft.rippleup.data.remote.CloudVerification
 import com.yft.rippleup.data.remote.Config
 import com.yft.rippleup.data.remote.SessionManager
+import com.yft.rippleup.data.remote.SupaClient
 import com.yft.rippleup.util.Guard
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -50,10 +51,10 @@ data class PendingVerify(
 /** PRODUCTION desktop model: cloud-only. No demo accounts, no local fallback. */
 class AppViewModel {
 
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
     val sessions = SessionManager()
     val cloud = CloudSync(sessions)
-
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     private val bootInternal = MutableStateFlow(Boot.LOADING)
     val boot: StateFlow<Boot> = bootInternal
@@ -129,6 +130,49 @@ class AppViewModel {
 
     // ---- AUTH (OTP) ------------------------------------------------------------
 
+    // ---- AUTH (email + password; requires Confirm-email OFF while on the free tier) ----
+
+    suspend fun signUpWithPassword(
+        first: String, last: String, email: String, password: String,
+    ): Pair<String?, String?> {
+        val clean = email.trim().lowercase()
+        if (first.isBlank() || last.isBlank()) return Pair("Please enter your name.", null)
+        if (!clean.contains("@") || !clean.contains(".")) return Pair("Please enter a valid email.", null)
+        if (password.length < 6) return Pair("Password must be at least 6 characters.", null)
+        val res = SupaClient.authPost(
+            "signup",
+            kotlinx.serialization.json.buildJsonObject {
+                put("email", kotlinx.serialization.json.JsonPrimitive(clean))
+                put("password", kotlinx.serialization.json.JsonPrimitive(password))
+                put("data", kotlinx.serialization.json.buildJsonObject {
+                    put("full_name", kotlinx.serialization.json.JsonPrimitive(first.trim() + " " + last.trim()))
+                })
+            },
+        )
+        val parsed = res.parse<com.yft.rippleup.data.remote.AuthResponse>()
+        if (res.ok && parsed?.access_token != null) {
+            sessions.accessToken = parsed.access_token
+            parsed.refresh_token?.let { sessions.refreshToken = it }
+            return Pair(null, null)
+        }
+        if (res.ok && parsed?.access_token == null) return Pair("CONFIRM_EMAIL_ON", null)
+        return Pair(parsed?.msg, res.error())
+    }
+
+    suspend fun loginWithPassword(email: String, password: String): Pair<String?, String?> {
+        val res = SupaClient.authPost(
+            "token?grant_type=password",
+            SupaClient.obj("email" to email.trim().lowercase(), "password" to password),
+        )
+        val parsed = res.parse<com.yft.rippleup.data.remote.AuthResponse>()
+        if (res.ok && parsed?.access_token != null) {
+            sessions.accessToken = parsed.access_token
+            parsed.refresh_token?.let { sessions.refreshToken = it }
+            return Pair(null, null)
+        }
+        return Pair(parsed?.msg, res.error())
+    }
+
     suspend fun requestOtp(email: String): String? {
         if (!email.contains("@") || !email.contains(".")) return "Please enter a valid email."
         return cloud.sendOtp(email)
@@ -164,6 +208,22 @@ class AppViewModel {
             val profile = cloud.fetchProfile()
             if (profile == null) {
                 onResult(false, "Could not load your profile — try again.")
+                return@launch
+            }
+            onboardedPrefs.putBoolean("onboarded", true)
+            enterSession(profile)
+            bootInternal.value =
+                if (profile.approval_status == "approved") Boot.HOME else Boot.PENDING_APPROVAL
+            onResult(true, "")
+        }
+    }
+
+    /** Called after a successful password auth: loads the profile and routes. */
+    fun activatePasswordSession(authEmail: String, cloudUserId: String?, name: String?, onResult: (Boolean, String) -> Unit) {
+        scope.launch {
+            val profile = cloud.fetchProfile()
+            if (profile == null) {
+                onResult(false, "Could not load your profile - try again.")
                 return@launch
             }
             onboardedPrefs.putBoolean("onboarded", true)
