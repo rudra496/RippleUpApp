@@ -261,11 +261,19 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     // ---- ACTIONS ----------------------------------------------------------------
 
-    /** Self-reported action with photo -> cloud instantly, points on admin view or instantly? Self counts. */
-    fun commitSelfReported(pending: PendingVerify, onDone: (Boolean, String) -> Unit) {
+    /**
+     * Self-reported action with photo proof -> ripple counts instantly and the proof
+     * is filed into the admin review queue (verifications.photos) with the uploaded photo.
+     */
+    fun commitSelfReported(pending: PendingVerify, photoBytes: ByteArray?, onDone: (Boolean, String) -> Unit) {
         viewModelScope.launch {
             val uid = sessionInternal.value?.cloudId
                 ?: return@launch onDone(false, "Sign in first.")
+            // upload the proof photo first so the admin queue can show it
+            var photoPath: String? = null
+            if (photoBytes != null && photoBytes.isNotEmpty()) {
+                photoPath = cloud.uploadVerificationPhoto(uid, photoBytes).first
+            }
             val pushed = cloud.pushRipple(
                 CloudRipple(
                     user_id = uid,
@@ -280,10 +288,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             if (pushed == null) {
                 onDone(false, "Could not reach the cloud — try again.")
             } else {
+                var note = ""
+                if (photoPath != null) {
+                    cloud.createSelfVerification(pushed.id, listOf(photoPath))?.let { note = it }
+                }
                 ripplesInternal.value = cloud.fetchMyRipples()
                 recomputeStats()
                 cloud.syncBadges()
-                onDone(true, "")
+                onDone(true, note)
             }
         }
     }
@@ -303,6 +315,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         userLng: Double?,
         accuracyM: Double?,
         device: String,
+        address: String? = null,
     ): Pair<Long?, String?> {
         val result = cloud.submitQrScan(
             locationId = location.id,
@@ -311,6 +324,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             accuracyM = accuracyM,
             device = device,
             actionKey = "refill",
+            address = address,
         )
         if (result.first != null) {
             ripplesInternal.value = cloud.fetchMyRipples()

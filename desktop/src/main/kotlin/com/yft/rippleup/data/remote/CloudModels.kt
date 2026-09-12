@@ -106,6 +106,7 @@ data class VerificationReceipt(
     val created_at: String? = null,
     val ripple_id: Long? = null,
     val location_id: String? = null,
+    val photos: List<String> = emptyList(),
     val partner_locations: CloudLocation? = null,
     val profiles: CloudProfile? = null,
     val ripples: CloudRipple? = null,

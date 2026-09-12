@@ -174,6 +174,7 @@ fun QrScanScreen(
                                                                 userLng = fix.lng,
                                                                 accuracyM = fix.accuracyM?.toDouble(),
                                                                 device = "${Build.MANUFACTURER} ${Build.MODEL}".trim(),
+                                                                address = fix.address,
                                                             )
                                                             if (verId == null) {
                                                                 detected = false; processing = false

@@ -155,6 +155,24 @@ fun VerificationReceiptScreen(
                 Text(receipt.review_note, color = Color(0xFF6B2B2B), fontSize = 13.sp)
             }
         }
+
+        // PROOF PHOTOS
+        if (receipt.photos.isNotEmpty()) {
+            Spacer(Modifier.height(12.dp))
+            Text("Proof photos", style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Bold), color = Ink)
+            Spacer(Modifier.height(8.dp))
+            receipt.photos.forEach { path ->
+                com.yft.rippleup.ui.components.UrlImage(
+                    url = com.yft.rippleup.data.remote.Config.verificationPhotoUrl(path),
+                    contentDescription = "Proof photo",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp)
+                        .clip(RoundedCornerShape(14.dp)),
+                )
+                Spacer(Modifier.height(8.dp))
+            }
+        }
         Spacer(Modifier.height(30.dp))
     }
 }
@@ -180,6 +198,7 @@ fun VerificationRow(
     status: String,
     distance: Int?,
     address: String? = null,
+    photoPath: String? = null,
     onClick: () -> Unit,
 ) {
     val (statusText, statusBg, statusFg) = when (status) {
@@ -198,6 +217,16 @@ fun VerificationRow(
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        if (photoPath != null) {
+            com.yft.rippleup.ui.components.UrlImage(
+                url = com.yft.rippleup.data.remote.Config.verificationPhotoUrl(photoPath),
+                contentDescription = "Proof photo",
+                modifier = Modifier
+                    .size(52.dp)
+                    .clip(RoundedCornerShape(12.dp)),
+            )
+            Spacer(Modifier.width(10.dp))
+        }
         Column(Modifier.weight(1f)) {
             Text(name, style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Bold), color = Ink)
             Text("$place · $time", color = Secondary, fontSize = 11.sp)

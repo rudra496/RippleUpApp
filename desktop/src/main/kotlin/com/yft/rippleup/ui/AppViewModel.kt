@@ -280,10 +280,14 @@ class AppViewModel {
     // ---- ACTIONS ----------------------------------------------------------------
 
     /** Self-reported action with photo -> cloud instantly, points on admin view or instantly? Self counts. */
-    fun commitSelfReported(pending: PendingVerify, onDone: (Boolean, String) -> Unit) {
+    fun commitSelfReported(pending: PendingVerify, photoBytes: ByteArray?, onDone: (Boolean, String) -> Unit) {
         scope.launch {
             val uid = sessionInternal.value?.cloudId
                 ?: return@launch onDone(false, "Sign in first.")
+            var photoPath: String? = null
+            if (photoBytes != null && photoBytes.isNotEmpty()) {
+                photoPath = cloud.uploadVerificationPhoto(uid, photoBytes).first
+            }
             val pushed = cloud.pushRipple(
                 CloudRipple(
                     user_id = uid,
@@ -298,10 +302,14 @@ class AppViewModel {
             if (pushed == null) {
                 onDone(false, "Could not reach the cloud — try again.")
             } else {
+                var note = ""
+                if (photoPath != null) {
+                    cloud.createSelfVerification(pushed.id, listOf(photoPath))?.let { note = it }
+                }
                 ripplesInternal.value = cloud.fetchMyRipples()
                 recomputeStats()
                 cloud.syncBadges()
-                onDone(true, "")
+                onDone(true, note)
             }
         }
     }

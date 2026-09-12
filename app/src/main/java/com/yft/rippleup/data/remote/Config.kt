@@ -25,4 +25,8 @@ object Config {
 
     val cloudConfigured: Boolean get() = !SUPABASE_URL.contains("YOUR-PROJECT")
     val googleConfigured: Boolean get() = GOOGLE_WEB_CLIENT_ID.isNotBlank()
+
+    /** Public URL of an uploaded verification proof photo. */
+    fun verificationPhotoUrl(path: String) =
+        "$SUPABASE_URL/storage/v1/object/public/verification-photos/$path"
 }

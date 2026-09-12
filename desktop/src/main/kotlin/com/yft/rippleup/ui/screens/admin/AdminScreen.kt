@@ -226,6 +226,7 @@ fun AdminScreen(vm: com.yft.rippleup.ui.AppViewModel, onBack: () -> Unit) {
                         status = r.status,
                         distance = r.distance_m,
                         address = r.user_address,
+                        photoPath = r.photos.firstOrNull(),
                         onClick = { open = r },
                     )
                     if (r.status == "pending" || r.status == "flagged") {

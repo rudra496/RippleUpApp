@@ -2,6 +2,8 @@ package com.yft.rippleup.data.remote
 
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.add
+import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
@@ -128,6 +130,8 @@ class CloudSync(private val sessions: SessionManager) {
         accuracyM: Double?,
         device: String,
         actionKey: String,
+        photos: List<String> = emptyList(),
+        address: String? = null,
     ): Pair<Long?, String?> {
         val res = SupaClient.rpc(
             "submit_qr_verification",
@@ -138,12 +142,55 @@ class CloudSync(private val sessions: SessionManager) {
                 if (accuracyM != null) put("p_accuracy", accuracyM)
                 if (device.isNotBlank()) put("p_device", device)
                 put("p_action_key", actionKey)
+                if (photos.isNotEmpty()) put("p_photos", buildJsonArray { photos.forEach { add(it) } })
+                if (!address.isNullOrBlank()) put("p_address", address)
             },
             token(),
         )
         if (!res.ok) return null to res.error()
         val id = res.body?.trim()?.removePrefix("\"")?.removeSuffix("\"")?.toLongOrNull()
         return (id ?: -1L) to null
+    }
+
+    /** Uploads a proof photo to the verification-photos bucket. Returns its storage path, or an error. */
+    suspend fun uploadVerificationPhoto(userId: String, bytes: ByteArray): Pair<String?, String?> {
+        if (bytes.isEmpty()) return null to "Empty photo."
+        val path = "$userId/${System.currentTimeMillis()}.jpg"
+        val res = SupaClient.storageUpload(
+            bucket = "verification-photos",
+            objectPath = path,
+            bytes = bytes,
+            contentType = "image/jpeg",
+            token = token() ?: return null to "Sign in first.",
+        )
+        if (!res.ok) return null to res.error()
+        return path to null
+    }
+
+    /** Files a self-reported action into the admin review queue with its proof photo. */
+    suspend fun createSelfVerification(rippleId: Long, photos: List<String>): String? = runCatching {
+        val uid = currentUserId() ?: return "Not signed in."
+        val body = buildJsonObject {
+            put("user_id", uid)
+            put("ripple_id", rippleId)
+            put("method", "self_report")
+            put("status", "pending")
+            if (photos.isNotEmpty()) put("photos", buildJsonArray { photos.forEach { add(it) } })
+        }
+        val res = SupaClient.rest(
+            "POST", "verifications", "",
+            body = kotlinx.serialization.json.Json.encodeToString(
+                kotlinx.serialization.json.JsonObject.serializer(), body,
+            ),
+            token = token(), prefer = "return=minimal",
+        )
+        if (res.ok) null else res.error()
+    }.getOrNull() ?: "Could not file your verification."
+
+    /** Changes the signed-in user's password (forgot-password via emailed code). */
+    suspend fun updatePassword(newPassword: String): String? {
+        val res = SupaClient.authPut("user", SupaClient.obj("password" to newPassword), token() ?: return "Sign in first.")
+        return if (res.ok) null else res.error()
     }
 
     // ---- VERIFICATION RECEIPTS ----

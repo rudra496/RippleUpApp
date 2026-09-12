@@ -131,7 +131,7 @@ fun DiscoverScreen(
                 Content.selfReport.forEach { a ->
                     ActionCard(a, done = a.title in doneTitles) {
                         vm.commitSelfReported(
-                            com.yft.rippleup.ui.PendingVerify(a.title, a.note, a.points, a.actionKey, 0.05f, viaQr = false)
+                            com.yft.rippleup.ui.PendingVerify(a.title, a.note, a.points, a.actionKey, 0.05f, viaQr = false), null
                         ) { _, _ -> }
                         doneTitles = doneTitles + a.title
                     }
@@ -147,7 +147,7 @@ fun DiscoverScreen(
                 Content.partnerVerified.forEach { a ->
                     ActionCard(a, done = a.title in doneTitles) {
                         vm.commitSelfReported(
-                            com.yft.rippleup.ui.PendingVerify(a.title, a.note, a.points, a.actionKey, 1.0f, viaQr = false)
+                            com.yft.rippleup.ui.PendingVerify(a.title, a.note, a.points, a.actionKey, 1.0f, viaQr = false), null
                         ) { _, _ -> }
                         doneTitles = doneTitles + a.title
                     }

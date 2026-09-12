@@ -81,6 +81,40 @@ object SupaClient {
         http(url, "GET", baseHeaders(token), null)
     }
 
+    suspend fun authPut(path: String, body: JsonObject, token: String): RestResult =
+        withContext(Dispatchers.IO) {
+            val url = "${Config.SUPABASE_URL}/auth/v1/$path"
+            http(url, "PUT", baseHeaders(token), json.encodeToString(JsonObject.serializer(), body))
+        }
+
+    /** Raw upload to Supabase Storage. Returns the storage object path on success. */
+    suspend fun storageUpload(
+        bucket: String,
+        objectPath: String,
+        bytes: ByteArray,
+        contentType: String,
+        token: String,
+    ): RestResult = withContext(Dispatchers.IO) {
+        val url = "${Config.SUPABASE_URL}/storage/v1/object/$bucket/$objectPath"
+        var con: HttpURLConnection? = null
+        runCatching {
+            con = (URL(url).openConnection() as HttpURLConnection).apply {
+                requestMethod = "POST"
+                connectTimeout = 15_000
+                readTimeout = 30_000
+                doOutput = true
+                setRequestProperty("apikey", Config.SUPABASE_PUBLISHABLE_KEY)
+                setRequestProperty("Authorization", "Bearer $token")
+                setRequestProperty("Content-Type", contentType)
+                setRequestProperty("x-upsert", "true")
+                outputStream.use { it.write(bytes) }
+            }
+            val code = con!!.responseCode
+            val stream = if (code in 200..299) con!!.inputStream else con!!.errorStream
+            RestResult(code, stream?.bufferedReader()?.readText())
+        }.getOrElse { RestResult(-1, it.message) }.also { con?.disconnect() }
+    }
+
     fun obj(vararg pairs: Pair<String, Any?>): JsonObject = buildJsonObject {
         pairs.forEach { (k, v) ->
             when (v) {

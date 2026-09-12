@@ -53,7 +53,25 @@ import com.yft.rippleup.ui.screens.home.dashedBorder
 import com.yft.rippleup.ui.theme.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import android.graphics.BitmapFactory
 import java.io.File
+
+/** Downscale + JPEG-compress a captured photo for upload (keeps uploads small on mobile data). */
+internal fun readCompressedJpeg(context: android.content.Context, uri: android.net.Uri, maxDim: Int = 1280): ByteArray? =
+    runCatching {
+        val resolver = context.contentResolver
+        val bounds = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        resolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
+        var sample = 1
+        while (bounds.outWidth / (sample * 2) >= maxDim || bounds.outHeight / (sample * 2) >= maxDim) sample *= 2
+        val opts = android.graphics.BitmapFactory.Options().apply { inSampleSize = sample }
+        val bmp = resolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, opts) }
+            ?: return null
+        val out = java.io.ByteArrayOutputStream()
+        bmp.compress(android.graphics.Bitmap.CompressFormat.JPEG, 75, out)
+        bmp.recycle()
+        out.toByteArray()
+    }.getOrNull()
 
 /** p11/p55 — teal countdown ring, running monster, capture area, submit. */
 @Composable
@@ -251,7 +269,8 @@ fun VerifyActionScreen(
                     rejectMsg = rejection
                     submitting = false
                 } else {
-                    vm.commitSelfReported(pending) { ok, msg ->
+                    val photoBytes = photoUri?.let { readCompressedJpeg(context, it) }
+                    vm.commitSelfReported(pending, photoBytes) { ok, msg ->
                         submitting = false
                         if (ok) onVerified() else rejectMsg = msg
                     }

@@ -240,7 +240,7 @@ fun EditListSheet(vm: AppViewModel, ripples: List<CloudRipple>, onClose: () -> U
                                         val key = if (title.contains("Compost")) "compost" else "refill"
                                         val kg = if (title.contains("Compost")) 0.3f else 0.05f
                                         vm.commitSelfReported(
-                                            com.yft.rippleup.ui.PendingVerify(title, sub, pts.removePrefix("+").toInt(), key, kg, viaQr = false)
+                                            com.yft.rippleup.ui.PendingVerify(title, sub, pts.removePrefix("+").toInt(), key, kg, viaQr = false), null
                                         ) { _, _ -> }
                                     },
                                 contentAlignment = Alignment.Center,

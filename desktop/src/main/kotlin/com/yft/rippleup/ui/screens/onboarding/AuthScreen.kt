@@ -52,10 +52,9 @@ import com.yft.rippleup.ui.theme.*
 import kotlinx.coroutines.launch
 
 /**
- * PRODUCTION auth: email + password (PDF design). Every new account is created as
- * "pending" and must be approved in the Admin Review queue before it can be used —
- * that is the verification layer. Google sign-in activates once the OAuth client ID
- * is configured (Config.GOOGLE_WEB_CLIENT_ID).
+ * PRODUCTION auth: email + password, 6-digit email code, and Google sign-in.
+ * New accounts are approved automatically; the Admin Review queue moderates
+ * actions. Includes a working forgot-password flow (emailed 6-digit code).
  */
 @Composable
 fun AuthScreen(vm: com.yft.rippleup.ui.AppViewModel) {
@@ -67,6 +66,9 @@ fun AuthScreen(vm: com.yft.rippleup.ui.AppViewModel) {
     var show by remember { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
     var googleBusy by remember { mutableStateOf(false) }
+    var forgot by remember { mutableStateOf(false) }     // Forgot password flow
+    var forgotSent by remember { mutableStateOf(false) } // reset code emailed
+    var code by remember { mutableStateOf("") }
     var err by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
 
@@ -117,10 +119,16 @@ fun AuthScreen(vm: com.yft.rippleup.ui.AppViewModel) {
         }
         FieldLabel("Email")
         MintField(email, { email = it }, "you@university.edu", KeyboardType.Email)
+        if (mode == 1 && forgot && forgotSent) {
+            Spacer(Modifier.height(14.dp))
+            FieldLabel("6-digit code from your email")
+            MintField(code, { code = it.filter { c -> c.isDigit() }.take(8) }, "12345678", KeyboardType.Number)
+        }
+        if (!(mode == 1 && forgot && !forgotSent)) {
         Spacer(Modifier.height(14.dp))
-        FieldLabel("Password")
+        FieldLabel(if (forgot) "New password" else "Password")
         MintField(
-            pass, { pass = it }, "Min. 6 characters", KeyboardType.Password,
+            pass, { pass = it }, if (forgot) "New password (min. 6)" else "Min. 6 characters", KeyboardType.Password,
             trailing = {
                 Text(
                     if (show) "Hide" else "Show",
@@ -132,12 +140,47 @@ fun AuthScreen(vm: com.yft.rippleup.ui.AppViewModel) {
             },
             visual = if (show) VisualTransformation.None else PasswordVisualTransformation(),
         )
+        }
+
+        if (mode == 1 && !forgot) {
+            Spacer(Modifier.height(6.dp))
+            Text(
+                "Forgot password?",
+                color = Teal,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.fillMaxWidth().noRippleClickable {
+                    forgot = true
+                    forgotSent = false
+                    code = ""
+                    pass = ""
+                    err = ""
+                },
+                textAlign = TextAlign.End,
+            )
+        }
+        if (mode == 1 && forgot && forgotSent) {
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "Back to log in",
+                color = Teal,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.fillMaxWidth().noRippleClickable {
+                    forgot = false
+                    forgotSent = false
+                    code = ""
+                    pass = ""
+                    err = ""
+                },
+                textAlign = TextAlign.Center,
+            )
+        }
 
         if (mode == 0) {
             Spacer(Modifier.height(10.dp))
             Text(
-                "By signing up you agree to our Terms of Service and Privacy Policy. " +
-                    "Your account is verified by the RippleUp team before first use.",
+                "By signing up you agree to our Terms of Service and Privacy Policy.",
                 color = Secondary, fontSize = 10.sp, lineHeight = 16.sp,
             )
         }
@@ -150,9 +193,17 @@ fun AuthScreen(vm: com.yft.rippleup.ui.AppViewModel) {
         Spacer(Modifier.weight(1f))
         Spacer(Modifier.height(24.dp))
         GradientButton(
-            label = if (busy) "Please wait…" else "Continue",
-            enabled = !busy && email.contains("@") && email.contains(".") && pass.length >= 6 &&
-                (mode == 1 || (first.isNotBlank() && last.isNotBlank())),
+            label = when {
+                busy -> "Please wait…"
+                mode == 1 && forgot && !forgotSent -> "Send reset code"
+                mode == 1 && forgot -> "Reset password & sign in"
+                else -> "Continue"
+            },
+            enabled = !busy && email.contains("@") && email.contains(".") && when {
+                mode == 0 -> pass.length >= 6 && first.isNotBlank() && last.isNotBlank()
+                forgot -> if (!forgotSent) true else code.length in 6..8 && pass.length >= 6
+                else -> pass.length >= 6
+            },
             modifier = Modifier.fillMaxWidth(),
         ) {
             busy = true
@@ -168,6 +219,26 @@ fun AuthScreen(vm: com.yft.rippleup.ui.AppViewModel) {
                         e == "CONFIRM_EMAIL_ON" ->
                             err = "Account created! Please turn Confirm email OFF (Auth → Providers → Email), then log in."
                         else -> err = e + (detail?.let { " — $it" } ?: "")
+                    }
+                } else if (mode == 1 && forgot) {
+                    if (!forgotSent) {
+                        val e2 = vm.requestOtp(email.trim())
+                        if (e2 == null) {
+                            forgotSent = true
+                            err = ""
+                        } else err = e2
+                    } else {
+                        vm.verifyCode(email.trim(), code) { ok, msg ->
+                            if (!ok) {
+                                busy = false
+                                err = msg ?: "Invalid or expired code."
+                            } else scope.launch {
+                                val e3 = vm.cloud.updatePassword(pass)
+                                busy = false
+                                if (e3 != null) err = e3
+                            }
+                        }
+                        return@launch
                     }
                 } else {
                     val (e, detail) = vm.loginWithPassword(email, pass)
@@ -212,13 +283,6 @@ fun AuthScreen(vm: com.yft.rippleup.ui.AppViewModel) {
                 color = if (googleBusy) Secondary else Ink,
             )
         }
-        Spacer(Modifier.height(14.dp))
-        Text(
-            "New accounts are reviewed by the RippleUp team before first use.",
-            color = Secondary,
-            fontSize = 11.sp,
-            modifier = Modifier.fillMaxWidth().padding(bottom = 20.dp),
-            textAlign = TextAlign.Center,
-        )
+        Spacer(Modifier.height(20.dp))
     }
 }

@@ -13,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -29,6 +30,35 @@ fun RippleLogo(size: Dp = 40.dp, useEmblem: Boolean = false) {
         contentDescription = "RippleUp",
         modifier = Modifier.size(size),
     )
+}
+
+/** Tiny URL image loader (thumbnails/small proofs — no external image library). */
+@Composable
+fun UrlImage(url: String, contentDescription: String?, modifier: Modifier = Modifier, sample: Int = 2) {
+    val bmp = androidx.compose.runtime.remember(url) {
+        androidx.compose.runtime.mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null)
+    }
+    androidx.compose.runtime.LaunchedEffect(url) {
+        bmp.value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            runCatching {
+                val bytes = java.net.URL(url).readBytes()
+                val opts = android.graphics.BitmapFactory.Options().apply { inSampleSize = sample }
+                android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size, opts)
+                    ?.asImageBitmap()
+            }.getOrNull()
+        }
+    }
+    val b = bmp.value
+    if (b != null) {
+        Image(
+            bitmap = b,
+            contentDescription = contentDescription,
+            modifier = modifier,
+            contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+        )
+    } else {
+        Box(modifier.background(Mint))
+    }
 }
 
 /** Teal gradient pill button (Next / Continue / Submit…). */

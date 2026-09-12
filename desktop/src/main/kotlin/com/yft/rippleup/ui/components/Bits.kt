@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.sp
 import com.yft.rippleup.resources.Res
 import com.yft.rippleup.resources.logo
 import com.yft.rippleup.resources.drop
+import androidx.compose.ui.graphics.toComposeImageBitmap
 import com.yft.rippleup.ui.theme.*
 
 @Composable
@@ -31,6 +32,33 @@ fun RippleLogo(size: Dp = 40.dp, useEmblem: Boolean = false) {
         contentDescription = "RippleUp",
         modifier = Modifier.size(size),
     )
+}
+
+/** Tiny URL image loader (thumbnails/small proofs — no external image library). */
+@Composable
+fun UrlImage(url: String, contentDescription: String?, modifier: Modifier = Modifier) {
+    val bmp = androidx.compose.runtime.remember(url) {
+        androidx.compose.runtime.mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null)
+    }
+    androidx.compose.runtime.LaunchedEffect(url) {
+        bmp.value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            runCatching {
+                val bytes = java.net.URL(url).readBytes()
+                org.jetbrains.skia.Image.makeFromEncoded(bytes).toComposeImageBitmap()
+            }.getOrNull()
+        }
+    }
+    val b = bmp.value
+    if (b != null) {
+        Image(
+            bitmap = b,
+            contentDescription = contentDescription,
+            modifier = modifier,
+            contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+        )
+    } else {
+        Box(modifier.background(Mint))
+    }
 }
 
 /** Teal gradient pill button (Next / Continue / Submit…). */

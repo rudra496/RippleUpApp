@@ -227,7 +227,8 @@ fun VerifyActionScreen(
                     rejectMsg = rejection
                     submitting = false
                 } else {
-                    vm.commitSelfReported(pending) { ok, msg ->
+                    val photoBytes = photoFile?.let { readCompressedJpeg(it) }
+                    vm.commitSelfReported(pending, photoBytes) { ok, msg ->
                         submitting = false
                         if (ok) onVerified() else rejectMsg = msg
                     }
@@ -441,3 +442,20 @@ private fun Confetti() {
         }
     }
 }
+
+/** Downscale + JPEG-compress a chosen photo for upload (desktop: ImageIO). */
+internal fun readCompressedJpeg(file: java.io.File, maxDim: Int = 1280): ByteArray? = runCatching {
+    val raw = file.readBytes()
+    if (raw.size <= 300_000) return raw
+    val img = javax.imageio.ImageIO.read(file) ?: return raw
+    var w = img.width; var h = img.height
+    val scale = minOf(1f, maxDim.toFloat() / maxOf(w, h))
+    w = (w * scale).toInt().coerceAtLeast(1); h = (h * scale).toInt().coerceAtLeast(1)
+    val resized = java.awt.image.BufferedImage(w, h, java.awt.image.BufferedImage.TYPE_INT_RGB)
+    val g = resized.createGraphics()
+    g.drawImage(img, 0, 0, w, h, null)
+    g.dispose()
+    val out = java.io.ByteArrayOutputStream()
+    javax.imageio.ImageIO.write(resized, "jpg", out)
+    out.toByteArray()
+}.getOrNull()
