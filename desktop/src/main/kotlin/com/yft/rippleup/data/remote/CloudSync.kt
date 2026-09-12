@@ -198,21 +198,21 @@ class CloudSync(private val sessions: SessionManager) {
     suspend fun fetchMyVerifications(): List<VerificationReceipt> = runCatching {
         val uid = currentUserId() ?: return emptyList()
         val res = SupaClient.rest("GET", "verifications",
-            "user_id=eq.$uid&select=*,partner_locations(*),ripples(*),profiles(*)&order=created_at.desc&limit=50",
+            "user_id=eq.$uid&select=*,partner_locations(*),ripples(*),profiles!user_id(*)&order=created_at.desc&limit=50",
             token = token())
         if (res.ok) listJson.decodeFromString(ListSerializer(VerificationReceipt.serializer()), res.body ?: "[]") else emptyList()
     }.getOrDefault(emptyList())
 
     suspend fun fetchAllVerifications(): List<VerificationReceipt> = runCatching {
         val res = SupaClient.rest("GET", "verifications",
-            "select=*,partner_locations(*),ripples(*),profiles(*)&order=created_at.desc&limit=100",
+            "select=*,partner_locations(*),ripples(*),profiles!user_id(*)&order=created_at.desc&limit=100",
             token = token())
         if (res.ok) listJson.decodeFromString(ListSerializer(VerificationReceipt.serializer()), res.body ?: "[]") else emptyList()
     }.getOrDefault(emptyList())
 
     suspend fun fetchReceiptById(id: Long): VerificationReceipt? = runCatching {
         val res = SupaClient.rest("GET", "verifications",
-            "id=eq.$id&select=*,partner_locations(*),ripples(*),profiles(*)",
+            "id=eq.$id&select=*,partner_locations(*),ripples(*),profiles!user_id(*)",
             token = token())
         if (res.ok) listJson.decodeFromString(ListSerializer(VerificationReceipt.serializer()), res.body ?: "[]").firstOrNull() else null
     }.getOrNull()
