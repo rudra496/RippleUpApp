@@ -11,3 +11,4 @@ captures/
 release.keystore
 *.keystore
 !gradle/wrapper/gradle-wrapper.jar
+.kotlin/
