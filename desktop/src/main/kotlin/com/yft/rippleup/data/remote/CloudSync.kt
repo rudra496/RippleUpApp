@@ -187,6 +187,14 @@ class CloudSync(private val sessions: SessionManager) {
         if (res.ok) null else res.error()
     }.getOrNull() ?: "Could not file your verification."
 
+    /** Privacy: deletes proof photos once the verification is reviewed (admin only). */
+    suspend fun deleteVerificationPhotos(photos: List<String>) {
+        val t = token() ?: return
+        photos.forEach { path ->
+            runCatching { SupaClient.storageDelete("verification-photos", path, t) }
+        }
+    }
+
     /** Changes the signed-in user's password (forgot-password via emailed code). */
     suspend fun updatePassword(newPassword: String): String? {
         val res = SupaClient.authPut("user", SupaClient.obj("password" to newPassword), token() ?: return "Sign in first.")

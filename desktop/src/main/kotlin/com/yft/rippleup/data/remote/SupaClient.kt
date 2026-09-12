@@ -115,6 +115,25 @@ object SupaClient {
         }.getOrElse { RestResult(-1, it.message) }.also { con?.disconnect() }
     }
 
+    /** Deletes a storage object via the Storage API (removes row + backing file). */
+    suspend fun storageDelete(bucket: String, objectPath: String, token: String): RestResult =
+        withContext(Dispatchers.IO) {
+            val url = "${Config.SUPABASE_URL}/storage/v1/object/$bucket/$objectPath"
+            var con: HttpURLConnection? = null
+            runCatching {
+                con = (URL(url).openConnection() as HttpURLConnection).apply {
+                    requestMethod = "DELETE"
+                    connectTimeout = 15_000
+                    readTimeout = 30_000
+                    setRequestProperty("apikey", Config.SUPABASE_PUBLISHABLE_KEY)
+                    setRequestProperty("Authorization", "Bearer $token")
+                }
+                val code = con!!.responseCode
+                val stream = if (code in 200..299) con!!.inputStream else con!!.errorStream
+                RestResult(code, stream?.bufferedReader()?.readText())
+            }.getOrElse { RestResult(-1, it.message) }.also { con?.disconnect() }
+        }
+
     fun obj(vararg pairs: Pair<String, Any?>): JsonObject = buildJsonObject {
         pairs.forEach { (k, v) ->
             when (v) {

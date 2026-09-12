@@ -238,6 +238,7 @@ fun AdminScreen(vm: com.yft.rippleup.ui.AppViewModel, onBack: () -> Unit) {
                                 scope.launch {
                                     val err = cloud.approveVerification(r.id) { }
                                     if (err == null) {
+                                        cloud.deleteVerificationPhotos(r.photos)
                                         receipts = receipts.map { if (it.id == r.id) it.copy(status = "approved") else it }
                                         message = ""
                                     } else message = err
@@ -248,6 +249,7 @@ fun AdminScreen(vm: com.yft.rippleup.ui.AppViewModel, onBack: () -> Unit) {
                                 scope.launch {
                                     val err = cloud.rejectVerification(r.id, "Location or details unclear")
                                     if (err == null) {
+                                        cloud.deleteVerificationPhotos(r.photos)
                                         receipts = receipts.map { if (it.id == r.id) it.copy(status = "rejected") else it }
                                         message = ""
                                     } else message = err
