@@ -66,6 +66,12 @@ class CloudSync(private val sessions: SessionManager) {
         return null to (parsed?.msg ?: res.error())
     }
 
+    /** Google sign-in (desktop PKCE): adopt tokens exchanged by GoogleDesktop.signIn(). */
+    fun adoptSession(access: String, refresh: String?) {
+        sessions.accessToken = access
+        if (!refresh.isNullOrBlank()) sessions.refreshToken = refresh
+    }
+
     suspend fun currentUserId(): String? = runCatching {
         val res = SupaClient.authGet("user", sessions.accessToken)
         if (res.ok) res.parse<AuthResponse>()?.user?.id else null

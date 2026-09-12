@@ -41,6 +41,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.credentials.CredentialManager
+import androidx.credentials.CustomCredential
+import androidx.credentials.GetCredentialRequest
+import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import androidx.credentials.exceptions.GetCredentialCancellationException
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.yft.rippleup.data.remote.Config
 import com.yft.rippleup.ui.components.CircleIconButton
 import com.yft.rippleup.ui.components.FieldLabel
@@ -68,6 +74,7 @@ fun AuthScreen(vm: com.yft.rippleup.ui.AppViewModel) {
     var code by remember { mutableStateOf("") }
     var show by remember { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
+    var googleBusy by remember { mutableStateOf(false) }
     var err by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -217,6 +224,60 @@ fun AuthScreen(vm: com.yft.rippleup.ui.AppViewModel) {
             }
         }
         Spacer(Modifier.height(12.dp))
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .noRippleClickable(!googleBusy) {
+                    googleBusy = true
+                    err = ""
+                    scope.launch {
+                        try {
+                            val manager = CredentialManager.create(context)
+                            val request = GetCredentialRequest.Builder()
+                                .addCredentialOption(
+                                    GetGoogleIdOption.Builder()
+                                        .setServerClientId(Config.GOOGLE_WEB_CLIENT_ID)
+                                        .setFilterByAuthorizedAccounts(false)
+                                        .build(),
+                                )
+                                .build()
+                            val result = manager.getCredential(context, request)
+                            val idToken = when (val cred = result.credential) {
+                                is CustomCredential ->
+                                    if (cred.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL)
+                                        GoogleIdTokenCredential.createFrom(cred.data).idToken
+                                    else null
+                                else -> null
+                            }
+                            if (idToken == null) {
+                                err = "Google sign-in is unavailable on this device."
+                                googleBusy = false
+                            } else {
+                                vm.loginWithGoogle(idToken) { ok, msg ->
+                                    googleBusy = false
+                                    if (!ok) err = msg
+                                }
+                            }
+                        } catch (e: GetCredentialCancellationException) {
+                            googleBusy = false
+                        } catch (e: Exception) {
+                            err = e.message ?: "Google sign-in failed."
+                            googleBusy = false
+                        }
+                    }
+                }
+                .clip(RoundedCornerShape(28.dp))
+                .background(Color.White)
+                .border(1.dp, Color(0xFFD6D6D6), RoundedCornerShape(28.dp))
+                .padding(vertical = 15.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                if (googleBusy) "Opening Google…" else "Continue with Google",
+                style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.SemiBold),
+                color = if (googleBusy) Secondary else Ink,
+            )
+        }
         Spacer(Modifier.height(14.dp))
         Text(
             "New accounts are reviewed by the RippleUp team before first use.",

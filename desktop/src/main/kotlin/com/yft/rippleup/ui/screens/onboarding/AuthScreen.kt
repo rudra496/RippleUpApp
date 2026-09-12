@@ -41,6 +41,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.yft.rippleup.data.remote.Config
+import com.yft.rippleup.data.remote.GoogleDesktop
 import com.yft.rippleup.ui.components.CircleIconButton
 import com.yft.rippleup.ui.components.FieldLabel
 import com.yft.rippleup.ui.components.GradientButton
@@ -65,8 +66,7 @@ fun AuthScreen(vm: com.yft.rippleup.ui.AppViewModel) {
     var pass by remember { mutableStateOf("") }
     var show by remember { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
-    var resendBusy by remember { mutableStateOf(false) }
-    var codeSent by remember { mutableStateOf(false) }
+    var googleBusy by remember { mutableStateOf(false) }
     var err by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
 
@@ -181,6 +181,37 @@ fun AuthScreen(vm: com.yft.rippleup.ui.AppViewModel) {
             }
         }
         Spacer(Modifier.height(12.dp))
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .noRippleClickable(!googleBusy) {
+                    googleBusy = true
+                    err = ""
+                    scope.launch {
+                        val result = GoogleDesktop.signIn()
+                        if (result.access == null) {
+                            err = result.error ?: "Google sign-in failed."
+                            googleBusy = false
+                        } else {
+                            vm.loginWithGoogleTokens(result.access, result.refresh) { ok, msg ->
+                                googleBusy = false
+                                if (!ok) err = msg
+                            }
+                        }
+                    }
+                }
+                .clip(RoundedCornerShape(28.dp))
+                .background(Color.White)
+                .border(1.dp, Color(0xFFD6D6D6), RoundedCornerShape(28.dp))
+                .padding(vertical = 15.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                if (googleBusy) "Opening Google…" else "Continue with Google",
+                style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.SemiBold),
+                color = if (googleBusy) Secondary else Ink,
+            )
+        }
         Spacer(Modifier.height(14.dp))
         Text(
             "New accounts are reviewed by the RippleUp team before first use.",

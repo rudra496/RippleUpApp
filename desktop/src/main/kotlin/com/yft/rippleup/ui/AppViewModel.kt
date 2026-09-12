@@ -218,6 +218,23 @@ class AppViewModel {
         }
     }
 
+    /** Google sign-in (desktop PKCE): tokens already adopted; load profile and route. */
+    fun loginWithGoogleTokens(access: String, refresh: String?, onResult: (Boolean, String) -> Unit) {
+        scope.launch {
+            cloud.adoptSession(access, refresh)
+            val profile = cloud.fetchProfile()
+            if (profile == null) {
+                onResult(false, "Could not load your profile — try again.")
+                return@launch
+            }
+            onboardedPrefs.putBoolean("onboarded", true)
+            enterSession(profile)
+            bootInternal.value =
+                if (profile.approval_status == "approved") Boot.HOME else Boot.PENDING_APPROVAL
+            onResult(true, "")
+        }
+    }
+
     /** Called after a successful password auth: loads the profile and routes. */
     fun activatePasswordSession(authEmail: String, cloudUserId: String?, name: String?, onResult: (Boolean, String) -> Unit) {
         scope.launch {
