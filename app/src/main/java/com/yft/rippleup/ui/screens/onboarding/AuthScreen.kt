@@ -61,7 +61,6 @@ import kotlinx.coroutines.launch
 fun AuthScreen(vm: com.yft.rippleup.ui.AppViewModel) {
     var mode by remember { mutableStateOf(0) }   // 0 Join Us, 1 Log In
     var codeLogin by remember { mutableStateOf(false) }  // Log In via emailed 6-digit code
-    var codeSent by remember { mutableStateOf(false) }
     var first by remember { mutableStateOf("") }
     var last by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
@@ -69,7 +68,6 @@ fun AuthScreen(vm: com.yft.rippleup.ui.AppViewModel) {
     var code by remember { mutableStateOf("") }
     var show by remember { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
-    var resendBusy by remember { mutableStateOf(false) }
     var err by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -125,21 +123,7 @@ fun AuthScreen(vm: com.yft.rippleup.ui.AppViewModel) {
             Spacer(Modifier.height(14.dp))
             FieldLabel("6-digit code from your email")
             MintField(code, { code = it.filter { c -> c.isDigit() }.take(8) }, "12345678", KeyboardType.Number)
-            Spacer(Modifier.height(8.dp))
-            Text(
-                when {
-                    resendBusy -> "Sending code…"
-                    codeSent -> "Code sent ✓ tap to resend"
-                    else -> "Resend code"
-                },
-                color = Teal,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.fillMaxWidth().noRippleClickable {
-                    scope.launch { err = vm.requestOtp(email) ?: "" }
-                },
-                textAlign = TextAlign.Center,
-            )
+
         }
         if (!(mode == 1 && codeLogin)) {
         Spacer(Modifier.height(14.dp))
