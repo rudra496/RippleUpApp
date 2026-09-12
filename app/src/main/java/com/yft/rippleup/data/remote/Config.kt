@@ -18,7 +18,7 @@ object Config {
     const val SUPABASE_PUBLISHABLE_KEY = "sb_publishable_xVpp3gFElglEDISgWuCkEw_hK4JBXl_"
 
     /** Google OAuth **Web** client ID (Credential Manager + Supabase Google provider). */
-    const val GOOGLE_WEB_CLIENT_ID = ""
+    const val GOOGLE_WEB_CLIENT_ID = "788006595228-a5lb5lofeflv3ufs6rb2kro13l3rdb6k.apps.googleusercontent.com"
 
     /** Shared secret for location QR payloads (printed QR sheets). Rotate for production. */
     const val QR_SECRET = "ripplup-qr-2026"
