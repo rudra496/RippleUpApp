@@ -50,9 +50,9 @@ data class CloudLocation(
     val name: String,
     val address: String? = null,
     val emoji: String? = null,
-    val lat: Double,
-    val lng: Double,
-    val radius_m: Int = 150,
+    val lat: Double? = null,
+    val lng: Double? = null,
+    val radius_m: Int? = 150,
     val qr_sig: String = "",
     val active: Boolean = true,
 )

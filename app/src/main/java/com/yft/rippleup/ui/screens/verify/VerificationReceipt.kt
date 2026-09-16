@@ -115,7 +115,10 @@ fun VerificationReceiptScreen(
             ReceiptRow("⏰", "Scanned at", receipt.created_at?.take(16)?.replace('T', ' ') ?: "—")
             Spacer(Modifier.height(8.dp))
             val d = receipt.distance_m
-            ReceiptRow("📏", "Distance", if (d != null) "${d} m from partner point" else "no GPS fix")
+            if (d != null) {
+                Spacer(Modifier.height(8.dp))
+                ReceiptRow("📏", "Distance", "${d} m from station point")
+            }
         }
         Spacer(Modifier.height(12.dp))
 

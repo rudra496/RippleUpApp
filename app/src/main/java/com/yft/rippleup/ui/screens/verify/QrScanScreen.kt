@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
@@ -62,6 +63,11 @@ import java.util.concurrent.Executors
  * p49 — Scan QR Code: real camera + MLKit; the payload must be a signed RippleUp
  * location QR. On detection: GPS fix -> geofence check -> cloud verification
  * (who + where) -> receipt.
+ *
+ * Retry rules: transient frames (non-RippleUp codes, signature smudges) keep scanning,
+ * but a SERVER verdict (success or failure) never auto-retries — success navigates to
+ * the receipt, failure shows a sticky error card with an explicit "Scan again" button,
+ * so the same code in frame can never loop the flow (that loop hid every error).
  */
 @Composable
 fun QrScanScreen(
@@ -86,8 +92,16 @@ fun QrScanScreen(
     var status by remember { mutableStateOf("Point the camera at a RippleUp QR") }
     var processing by remember { mutableStateOf(false) }
     var detected by remember { mutableStateOf(false) }
+    var failedMsg by remember { mutableStateOf<String?>(null) }
     val executor = remember { Executors.newSingleThreadExecutor() }
     DisposableEffect(Unit) { onDispose { executor.shutdown() } }
+
+    fun resetForRetry() {
+        failedMsg = null
+        detected = false
+        processing = false
+        status = "Point the camera at a RippleUp QR"
+    }
 
     Column(
         Modifier
@@ -138,14 +152,14 @@ fun QrScanScreen(
                                 .build()
                             val scanner = BarcodeScanning.getClient()
                             analysis.setAnalyzer(executor) { proxy ->
-                                if (detected || processing) { proxy.close(); return@setAnalyzer }
+                                if (detected || processing || failedMsg != null) { proxy.close(); return@setAnalyzer }
                                 val media = proxy.image
                                 if (media == null) { proxy.close(); return@setAnalyzer }
                                 val img = InputImage.fromMediaImage(media, proxy.imageInfo.rotationDegrees)
                                 scanner.process(img)
                                     .addOnSuccessListener { codes ->
                                         val raw = codes.firstOrNull()?.rawValue
-                                        if (raw != null && !detected && !processing) {
+                                        if (raw != null && !detected && !processing && failedMsg == null) {
                                             detected = true
                                             processing = true
                                             status = "QR found — checking location…"
@@ -163,8 +177,8 @@ fun QrScanScreen(
                                                     else -> {
                                                         val location = vm.cloud.fetchLocation(parsed.locationId)
                                                         if (location == null) {
-                                                            detected = false; processing = false
-                                                            status = "Unknown location — is the cloud configured?"
+                                                            processing = false
+                                                            failedMsg = "Unknown location — this QR is not registered."
                                                         } else {
                                                             status = "Getting your GPS position and address…"
                                                             val fix = GeoHelper.fullFix(context)
@@ -176,9 +190,12 @@ fun QrScanScreen(
                                                                 device = "${Build.MANUFACTURER} ${Build.MODEL}".trim(),
                                                                 address = fix.address,
                                                             )
-                                                            if (verId == null) {
-                                                                detected = false; processing = false
-                                                                status = err ?: "Verification failed — try again"
+                                                            if (verId != null) {
+                                                                // success — hand over to the receipt flow
+                                                                onVerified(verId)
+                                                            } else {
+                                                                processing = false
+                                                                failedMsg = err ?: "Verification failed — try again"
                                                             }
                                                         }
                                                     }
@@ -208,15 +225,51 @@ fun QrScanScreen(
             }
             ViewfinderOverlay()
         }
-        // live status strip
-        Text(
-            status,
-            color = if (processing) Color(0xFF35D0C0) else Color(0xFF9FB3AE),
-            fontSize = 13.sp,
-            fontWeight = FontWeight.SemiBold,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth().padding(vertical = 14.dp),
-        )
+        if (failedMsg != null) {
+            // sticky verdict card: the reason stays readable until the user retries
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(Color(0xFF2A1214))
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    "Couldn't verify",
+                    color = Color(0xFFFF7A70),
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    failedMsg ?: "",
+                    color = Color(0xFFF3D9D6),
+                    fontSize = 13.sp,
+                    lineHeight = 19.sp,
+                    textAlign = TextAlign.Center,
+                )
+                Spacer(Modifier.height(12.dp))
+                Box(
+                    Modifier
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(Teal)
+                        .noRippleClickable { resetForRetry() }
+                        .padding(horizontal = 22.dp, vertical = 9.dp),
+                ) { Text("Scan again", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold) }
+            }
+        } else {
+            // live status strip
+            Text(
+                status,
+                color = if (processing) Color(0xFF35D0C0) else Color(0xFF9FB3AE),
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth().padding(vertical = 14.dp),
+            )
+        }
     }
 }
 

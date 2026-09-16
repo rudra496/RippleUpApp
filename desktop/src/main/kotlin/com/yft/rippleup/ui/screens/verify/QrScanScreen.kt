@@ -113,7 +113,9 @@ fun QrScanScreen(
                 ) {
                     Text("${loc.emoji?.ifBlank { "P" } ?: "P"}  ${loc.name}", style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Bold), color = Ink)
                     Text(loc.address ?: "", color = Secondary, fontSize = 12.sp)
-                    MiniMap(lat = loc.lat, lng = loc.lng, modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
+                    if (loc.lat != null && loc.lng != null) {
+                        MiniMap(lat = loc.lat, lng = loc.lng, modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
+                    }
                 }
             }
             Spacer(Modifier.height(14.dp))
@@ -127,8 +129,8 @@ fun QrScanScreen(
                             message = "Submitting verification..."
                             val (verId, err) = vm.submitQrScan(
                                 location = selected!!,
-                                userLat = selected!!.lat,
-                                userLng = selected!!.lng,
+                                userLat = null,
+                                userLng = null,
                                 accuracyM = null,
                                 device = "Desktop",
                             )

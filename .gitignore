@@ -12,3 +12,9 @@ release.keystore
 *.keystore
 !gradle/wrapper/gradle-wrapper.jar
 .kotlin/
+
+# RippleUp secrets & generated artifacts (never commit) — added 2026-09-14
+secrets/
+releases/
+qr-codes/
+rippleup-verify-phone.ps1
